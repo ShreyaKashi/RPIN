@@ -9,12 +9,15 @@ import shutil
 import pickle
 import cv2
 
-mcs_root_dir = "/home/kashis/Desktop/mcs/gen_scenes/eval5_validation_set"
-output_dir = "/home/kashis/Desktop/RPIN/data/MCS_1/"
-STORE_PATH="/home/kashis/Desktop/RPIN/data/MCS_misc/"
-output_dir_SS = "/home/kashis/Desktop/RPIN/data/MCS_SS/train/"
+
+mcs_root_dir = "/home/kalyanav/MCS/Data/ruleBasedDevSetV2_oracle_stc_120_mcs062/"
+output_dir = "/home/kalyanav/MS_thesis/RPIN_MCS/data/MCS_1/"
+STORE_PATH="/home/kalyanav/MS_thesis/RPIN_MCS/data/MCS_misc/"
+output_dir_SS = "/home/kalyanav/MS_thesis/RPIN_MCS/data/MCS_SS/train/"
 vid_start_end = []
 MAX_OBJS = 4
+SCALED_X = 224
+SCALED_Y = 224
 
 def getObjEntranceEvents(seq):
         objEntranceEventList = []
@@ -37,7 +40,7 @@ def getObjExitEvents(seq):
 scene_folder_name_init = '0000'
 
 for scene_name in os.listdir(mcs_root_dir):
-
+    # print('Currently building for scene : ', scene_name)
     # Get only plaus scenes with no occluders
     if "implaus" in scene_name:
         continue
@@ -99,6 +102,7 @@ for scene_name in os.listdir(mcs_root_dir):
     obj_bbox_list = []
     obj_mask_list = []
     # Trim videos and create a new dir
+    
     if not os.path.exists(str(output_dir_SS) + scene_folder_name_init):
         os.makedirs(str(output_dir_SS) + scene_folder_name_init)
         for idx, frame_id in enumerate(range(vid_len_details[0], vid_len_details[0] + max_vid_len)):
@@ -118,12 +122,15 @@ for scene_name in os.listdir(mcs_root_dir):
              temp_obj_bbox_dict = []
              temp_obj_mask_list = []
  
-
+             #TODO: Deal with no objects scenario
              # Get bbox and mask
              for k, v in states_dict_2.items():
                   if v["obj_type"] == "focused":
                        bbox_vals = v["2dbbox"][frame_id]
-                       temp_obj_bbox_dict.append([k, bbox_vals[0], bbox_vals[1], bbox_vals[0] + bbox_vals[2], bbox_vals[1] + bbox_vals[3]])
+                       #temp_obj_bbox_dict.append([k, bbox_vals[0], bbox_vals[1], bbox_vals[0] + bbox_vals[2], bbox_vals[1] + bbox_vals[3]])
+                       # using the scaled bbox values
+                       bbox_new_val = utils.bbox_scaler(bbox_vals, SCALED_X, SCALED_Y)
+                       temp_obj_bbox_dict.append([k, bbox_new_val[0], bbox_new_val[1], bbox_new_val[0] + bbox_new_val[2], bbox_new_val[1] + bbox_new_val[3]])
                        seg_color_frame = expected_tracks[k]["content"][frame_id]["segment_color"]
                        mask_img = cv2.cvtColor(
                             cv2.imread(f"{scene_path}/Mask/{frame_id:06d}.png"),
@@ -144,17 +151,22 @@ for scene_name in os.listdir(mcs_root_dir):
                        cropped_image = selected_mask[bbox_vals[1]:bbox_vals[1]+bbox_vals[3], bbox_vals[0]:bbox_vals[0]+bbox_vals[2]]
                        resized_cropped_img = cv2.resize(cropped_image.astype("float32"), (28, 28))
                        temp_obj_mask_list.append(resized_cropped_img)
-
-             obj_bbox_list.append(temp_obj_bbox_dict)
+             temp_obj_np = np.asarray(temp_obj_bbox_dict, dtype=np.float64)
+             temp_bbox_padded_boxes = utils.padding_bboxes(temp_obj_np, MAX_OBJS)
+             obj_bbox_list.append(temp_bbox_padded_boxes)
              obj_mask_list.append(temp_obj_mask_list)
     
-    obj_bbox_np = np.asarray(obj_bbox_list, dtype=np.float64)
-    bbox_dst = output_dir_SS + scene_folder_name_init + "_boxes.pkl"
-    pickle.dump(obj_bbox_np, open(bbox_dst, "wb"))
-
-    obj_mask_np = np.asarray(obj_mask_list, dtype=np.float64)
-    mask_dst = output_dir_SS + scene_folder_name_init + "_masks.pkl"
-    pickle.dump(obj_mask_np, open(mask_dst, "wb"))
+    # obj_bbox_np = np.asarray(obj_bbox_list, dtype=np.float64)
+    if len(obj_bbox_list)!= 0:
+        
+        obj_bbox_np = np.asarray(obj_bbox_list, dtype=np.float64)
+        
+        bbox_dst = output_dir_SS + scene_folder_name_init + "_boxes.pkl"
+        pickle.dump(obj_bbox_np, open(bbox_dst, "wb"))
+    
+        obj_mask_np = np.asarray(obj_mask_list, dtype=np.float64)
+        mask_dst = output_dir_SS + scene_folder_name_init + "_masks.pkl"
+        pickle.dump(obj_mask_np, open(mask_dst, "wb"))
 
 
              
