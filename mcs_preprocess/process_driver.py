@@ -23,22 +23,20 @@ SCALED_X = 224
 SCALED_Y = 224
 
 def get_obj_entrance_events(seq):
-        objEntranceEventList = []
+        objEntranceEventDict = {}
 
         for obj_id, obj_details in seq.obj_by_id.items():
-            if obj_details[0].obj_type == "focused":
-                objEntranceEventList.append([obj_id, obj_details[0].frame])
+            objEntranceEventDict[obj_id] = obj_details[0].frame
 
-        return objEntranceEventList
+        return objEntranceEventDict
 
 def get_obj_exit_events(seq):
-        objEntranceEventList = []
+        objEntranceEventDict = {}
 
         for obj_id, obj_details in seq.obj_by_id.items():
-            if obj_details[0].obj_type == "focused":
-                objEntranceEventList.append([obj_id, obj_details[-1].frame])
+            objEntranceEventDict[obj_id] = obj_details[-1].frame
 
-        return objEntranceEventList
+        return objEntranceEventDict
 
 def get_reqd_scenes_list():
     scene_list = []
@@ -49,8 +47,6 @@ def get_reqd_scenes_list():
             continue
 
         folder_path = os.path.join(MCS_ROOT_DIR, scene_name)
-        rgb_folder = os.path.join(folder_path, "RGB")
-        seg_mask = os.path.join(folder_path, "Mask")
         
         step_output_folder = os.path.join(folder_path, "Step_Output")
         step_out_initial = step_output_folder + "/" + os.listdir(step_output_folder)[0]
@@ -90,21 +86,32 @@ def get_vid_start_len(scene_name, seq, states_dict_2):
     obj_entrance_events = get_obj_entrance_events(seq)
     obj_exit_events = get_obj_exit_events(seq)
 
-    # if "grav" in scene_name:
-    #     placer_obj_id = [k for k, v in states_dict_2.items() if v["is_pole"]][0]
-    #     # placer_entrance_frame = obj_entrance_events[placer_obj_id]
-    #     # for k, v in states_dict_2.items():
-    #     #     if (v["obj_type"] == "focused" and not v["is_stationary"]):
-    #     #         if utils.isPlacerAttached_v1(k, vid_start_end[0], states_dict_2):
-    #     #             continue
+    if "grav" in scene_name:
+        # start_frame is frame when obj detaches from placer
+        placer_obj_id = [k for k, v in states_dict_2.items() if v["is_pole"]][0]
+        placer_entrance_frame = obj_entrance_events[placer_obj_id]
 
-    if (len(focused_objs) == 1):
-         start_frame = obj_entrance_events[0][1]
-         end_frame = obj_exit_events[0][1]
+        all_focused_obj_ids = [k for k, v in states_dict_2.items() if v["obj_type"] == "focused" and not v["is_stationary"]]
+        assert len(all_focused_obj_ids) == 1
+        focused_obj_id = all_focused_obj_ids[0]
+
+
+        for frame_id in range(placer_entrance_frame+2, len(seq.obj_by_frame)):
+            if not utils.isPlacerAttached_v1(focused_obj_id, frame_id, states_dict_2):
+                detached_frame = frame_id
+                break
+
+        start_frame = detached_frame
+        first_exit_frame = min([frame_no for obj_id, frame_no in obj_exit_events.items() if states_dict_2[obj_id]["obj_type"] == "focused"])
+        vid_len_details = (start_frame, first_exit_frame - start_frame)
+
+    elif (len(focused_objs) == 1):
+         start_frame = obj_entrance_events[focused_objs[0]]
+         end_frame = obj_exit_events[focused_objs[0]]
          vid_len_details = (start_frame, end_frame - start_frame)
     else:
-         common_entrance_frame = max([frame_no for obj_id, frame_no in obj_entrance_events])
-         first_exit_frame = min([frame_no for obj_id, frame_no in obj_exit_events])
+         common_entrance_frame = max([frame_no for obj_id, frame_no in obj_entrance_events.items() if states_dict_2[obj_id]["obj_type"] == "focused"])
+         first_exit_frame = min([frame_no for obj_id, frame_no in obj_exit_events.items() if states_dict_2[obj_id]["obj_type"] == "focused"])
          vid_len_details = (common_entrance_frame, first_exit_frame - common_entrance_frame)
 
     return vid_len_details[0], vid_len_details[1]
@@ -122,7 +129,23 @@ def get_max_vid_len(reqd_scenes, recompute=False):
         return 34
 
 
+def copy_process_images(frame_id, idx, rgb_folder, scene_folder_name_init):
+    # TODO: Resize images to 224x224
+    src = rgb_folder + "/" + str(frame_id).zfill(6) + ".png"
+    dst = OUTPUT_DIR + "/" + scene_folder_name_init
+    target_file_name = str(idx).zfill(3) + ".png"
+    loaded_src_img = cv2.cvtColor(
+                   cv2.imread(src),
+                   cv2.COLOR_BGR2RGB,
+               )
+    
+    if not os.path.exists(str(OUTPUT_DIR) + "/" + scene_folder_name_init):
+       os.makedirs(str(OUTPUT_DIR) + "/" + scene_folder_name_init)
+    cv2.imwrite(os.path.join(dst, target_file_name), loaded_src_img)
+
 scene_folder_name_init = '0000'
+
+empty_vals_scenes = ["eval_5_validation_passive_stc_0001_15_plaus"]
 
 reqd_scenes = get_reqd_scenes_list()
 max_vid_len = get_max_vid_len(reqd_scenes, False)
@@ -134,26 +157,17 @@ for scene_name in reqd_scenes:
     seg_mask = os.path.join(scene_folder_path, "Mask")
     
     expected_tracks, scene_metadata, seq, states_dict_2 = get_step_processed_out(scene_name)
+    vid_len = len(seq.obj_by_frame)
     
-    vid_start_frame, vid_len = get_vid_start_len(scene_name, seq, states_dict_2)
+    vid_start_frame, trimmed_vid_len = get_vid_start_len(scene_name, seq, states_dict_2)
 
     obj_bbox_list = []
     obj_mask_list = []
 
     # Trim videos and create a new dir
-    for idx, frame_id in enumerate(range(vid_start_frame, vid_start_frame + max_vid_len)):
-        src = rgb_folder + "/" + str(frame_id).zfill(6) + ".png"
-        dst = OUTPUT_DIR + scene_folder_name_init
-        target_file_name = str(idx).zfill(3) + ".png"
-        loaded_src_img = cv2.cvtColor(
-                       cv2.imread(src),
-                       cv2.COLOR_BGR2RGB,
-                   )
+    for idx, frame_id in enumerate(range(vid_start_frame, min(vid_start_frame + max_vid_len, vid_len))):
         
-        if not os.path.exists(str(OUTPUT_DIR) + scene_folder_name_init):
-           os.makedirs(str(OUTPUT_DIR) + scene_folder_name_init)
-        cv2.imwrite(os.path.join(dst, target_file_name), loaded_src_img)
-
+        copy_process_images(frame_id, idx, rgb_folder, scene_folder_name_init)
 
         temp_obj_bbox_dict = []
         temp_obj_mask_list = []
@@ -170,16 +184,16 @@ for scene_name in reqd_scenes:
                 mask_img = cv2.cvtColor(
                      cv2.imread(f"{scene_folder_path}/Mask/{frame_id:06d}.png"),
                      cv2.COLOR_BGR2RGB,
-                 )
+                )
                 selected_mask = np.logical_and.reduce(
-                 (
-                     mask_img[:, :, 0] == seg_color_frame["r"],
-                     mask_img[:, :, 1] == seg_color_frame["g"],
-                     mask_img[:, :, 2] == seg_color_frame["b"],
-                 )
-                 )
+                (
+                    mask_img[:, :, 0] == seg_color_frame["r"],
+                    mask_img[:, :, 1] == seg_color_frame["g"],
+                    mask_img[:, :, 2] == seg_color_frame["b"],
+                )
+                )
                 if np.sum(selected_mask) == 0:
-                 continue
+                    continue
                 cropped_image = selected_mask[bbox_vals[1]:bbox_vals[1]+bbox_vals[3], bbox_vals[0]:bbox_vals[0]+bbox_vals[2]]
                 resized_cropped_img = cv2.resize(cropped_image.astype("float32"), (28, 28))
                 temp_obj_mask_list.append(resized_cropped_img)
@@ -191,13 +205,14 @@ for scene_name in reqd_scenes:
     
     if len(obj_bbox_list)!= 0:
         obj_bbox_np = np.asarray(obj_bbox_list, dtype=np.float64)
-        bbox_dst = OUTPUT_DIR + scene_folder_name_init + "_boxes.pkl"
+        bbox_dst = OUTPUT_DIR + "/" + scene_folder_name_init + "_boxes.pkl"
         pickle.dump(obj_bbox_np, open(bbox_dst, "wb"))
 
         obj_mask_np = np.asarray(obj_mask_list, dtype=np.float64)
-        mask_dst = OUTPUT_DIR + scene_folder_name_init + "_masks.pkl"
+        mask_dst = OUTPUT_DIR + "/" + scene_folder_name_init + "_masks.pkl"
         pickle.dump(obj_mask_np, open(mask_dst, "wb"))
     else:
+        # TODO: Check why flow goes here
         import pdb; pdb.set_trace()
 
     scene_folder_name_init = str(int(scene_folder_name_init) + 1).zfill(4)

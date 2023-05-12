@@ -759,7 +759,7 @@ def isPlacerAttached_v1(currObjId, curr_frame_no, states_dict):
                     curr_frame_no
                 ][1]
 
-                return abs(placer_bottom_coord - fobj_top_coord) <= 5
+                return abs(placer_bottom_coord - fobj_top_coord) <= 10
 
 
 
