@@ -11,7 +11,7 @@ import cv2
 from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv(dotenv_path=Path("/home/kashis/Desktop/Eval7/RPIN/.env"))
+load_dotenv(dotenv_path=Path("/home/kalyanav/MS_thesis/RPIN_MCS/.env"))
 
 
 MCS_ROOT_DIR = os.getenv("MCS_ROOT_DIR")
@@ -197,8 +197,7 @@ for scene_name in reqd_scenes:
         obj_mask_np = np.asarray(obj_mask_list, dtype=np.float64)
         mask_dst = OUTPUT_DIR + scene_folder_name_init + "_masks.pkl"
         pickle.dump(obj_mask_np, open(mask_dst, "wb"))
-    else:
-        import pdb; pdb.set_trace()
+    
 
     scene_folder_name_init = str(int(scene_folder_name_init) + 1).zfill(4)
 
