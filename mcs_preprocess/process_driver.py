@@ -8,12 +8,19 @@ import utils as utils
 import shutil
 import pickle
 import cv2
+from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv(dotenv_path=Path("/home/kashis/Desktop/Eval7/RPIN/.env"))
+
 
 MCS_ROOT_DIR = os.getenv("MCS_ROOT_DIR")
 STORE_PATH = os.getenv("STORE_PATH")
 OUTPUT_DIR = os.getenv("OUTPUT_DIR")
 
 MAX_OBJS = 4
+SCALED_X = 224
+SCALED_Y = 224
 
 def get_obj_entrance_events(seq):
         objEntranceEventList = []
@@ -77,11 +84,19 @@ def get_step_processed_out(scene_name):
 
     return expected_tracks, scene_metadata, seq, states_dict_2   
 
-def get_vid_start_len(seq, states_dict_2):
+def get_vid_start_len(scene_name, seq, states_dict_2):
     # Find start frame no and vid len
     focused_objs = [k for k, v in states_dict_2.items() if v["obj_type"] == "focused"]
     obj_entrance_events = get_obj_entrance_events(seq)
     obj_exit_events = get_obj_exit_events(seq)
+
+    # if "grav" in scene_name:
+    #     placer_obj_id = [k for k, v in states_dict_2.items() if v["is_pole"]][0]
+    #     # placer_entrance_frame = obj_entrance_events[placer_obj_id]
+    #     # for k, v in states_dict_2.items():
+    #     #     if (v["obj_type"] == "focused" and not v["is_stationary"]):
+    #     #         if utils.isPlacerAttached_v1(k, vid_start_end[0], states_dict_2):
+    #     #             continue
 
     if (len(focused_objs) == 1):
          start_frame = obj_entrance_events[0][1]
@@ -99,7 +114,7 @@ def get_max_vid_len(reqd_scenes, recompute=False):
         common_vid_len = []
         for scene_name in reqd_scenes:
             expected_tracks, scene_metadata, seq, states_dict_2 = get_step_processed_out(scene_name)
-            start_frame, vid_len = get_vid_start_len(seq, states_dict_2)
+            start_frame, vid_len = get_vid_start_len(scene_name, seq, states_dict_2)
             common_vid_len.append(vid_len)
         return min(common_vid_len)
  
@@ -120,7 +135,7 @@ for scene_name in reqd_scenes:
     
     expected_tracks, scene_metadata, seq, states_dict_2 = get_step_processed_out(scene_name)
     
-    vid_start_frame, vid_len = get_vid_start_len(seq, states_dict_2)
+    vid_start_frame, vid_len = get_vid_start_len(scene_name, seq, states_dict_2)
 
     obj_bbox_list = []
     obj_mask_list = []
@@ -146,7 +161,11 @@ for scene_name in reqd_scenes:
         for k, v in states_dict_2.items():
             if v["obj_type"] == "focused":
                 bbox_vals = v["2dbbox"][frame_id]
-                temp_obj_bbox_dict.append([k, bbox_vals[0], bbox_vals[1], bbox_vals[0] + bbox_vals[2], bbox_vals[1] + bbox_vals[3]])
+                
+                # bbox values reshaped
+                bbox_new_val = utils.bbox_scaler(bbox_vals, SCALED_X, SCALED_Y)
+                temp_obj_bbox_dict.append([k, bbox_new_val[0], bbox_new_val[1], bbox_new_val[0] + bbox_new_val[2], bbox_new_val[1] + bbox_new_val[3]])
+                
                 seg_color_frame = expected_tracks[k]["content"][frame_id]["segment_color"]
                 mask_img = cv2.cvtColor(
                      cv2.imread(f"{scene_folder_path}/Mask/{frame_id:06d}.png"),
@@ -164,16 +183,22 @@ for scene_name in reqd_scenes:
                 cropped_image = selected_mask[bbox_vals[1]:bbox_vals[1]+bbox_vals[3], bbox_vals[0]:bbox_vals[0]+bbox_vals[2]]
                 resized_cropped_img = cv2.resize(cropped_image.astype("float32"), (28, 28))
                 temp_obj_mask_list.append(resized_cropped_img)
+        
+        temp_obj_np = np.asarray(temp_obj_bbox_dict, dtype=np.float64)
+        temp_bbox_padded_boxes = utils.padding_bboxes(temp_obj_np, MAX_OBJS)
         obj_bbox_list.append(temp_obj_bbox_dict)
         obj_mask_list.append(temp_obj_mask_list)
     
-    obj_bbox_np = np.asarray(obj_bbox_list, dtype=np.float64)
-    bbox_dst = OUTPUT_DIR + scene_folder_name_init + "_boxes.pkl"
-    pickle.dump(obj_bbox_np, open(bbox_dst, "wb"))
+    if len(obj_bbox_list)!= 0:
+        obj_bbox_np = np.asarray(obj_bbox_list, dtype=np.float64)
+        bbox_dst = OUTPUT_DIR + scene_folder_name_init + "_boxes.pkl"
+        pickle.dump(obj_bbox_np, open(bbox_dst, "wb"))
 
-    obj_mask_np = np.asarray(obj_mask_list, dtype=np.float64)
-    mask_dst = OUTPUT_DIR + scene_folder_name_init + "_masks.pkl"
-    pickle.dump(obj_mask_np, open(mask_dst, "wb"))
+        obj_mask_np = np.asarray(obj_mask_list, dtype=np.float64)
+        mask_dst = OUTPUT_DIR + scene_folder_name_init + "_masks.pkl"
+        pickle.dump(obj_mask_np, open(mask_dst, "wb"))
+    else:
+        import pdb; pdb.set_trace()
 
     scene_folder_name_init = str(int(scene_folder_name_init) + 1).zfill(4)
 

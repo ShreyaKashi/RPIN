@@ -14,6 +14,8 @@ from objects import *
 
 DELTA_DISTANCE = 50
 DELTA_STATIONARY = 0.5
+MCS_IMG_HEIGHT = 600
+MCS_IMG_WIDTH = 400
 
 def distance_between_two_points(left, right):
     return sum((l - r) ** 2 for l, r in zip(left, right)) ** 0.5
@@ -862,3 +864,35 @@ def createObjStateDict(obj_by_frame, obj_by_id, vid_len):
                 state_dict[unq_obj_id]["2dbbox"][f] = None
 
     return state_dict
+
+
+def bbox_scaler(bbox_val, scaled_x, scaled_y):
+    """Scales the bounding box values based on the change of size
+    """
+    bbox_new_val = copy.deepcopy(bbox_val)
+    img_shape = (MCS_IMG_HEIGHT, MCS_IMG_WIDTH)
+    rescaled_shape = (scaled_x, scaled_y)
+
+    scale = np.divide(rescaled_shape, img_shape)
+    bbox_new_val[0] = bbox_val[0] * scale[0]
+    bbox_new_val[2] = bbox_val[2] * scale[0]
+
+    bbox_new_val[1] = bbox_val[1] * scale[0]
+    bbox_new_val[3] = bbox_val[3] * scale[0]
+    
+    return bbox_new_val
+
+def padding_bboxes(object_bbox_np, max_num_objs):
+    """Padding the bounding boxes to fit the maximum number of objects
+    """
+    curr_num_objs = object_bbox_np.shape[0]
+    pad_size = max_num_objs - curr_num_objs
+    
+    bbox_copy = object_bbox_np # this arr must be looped across the frames
+
+    for i in range(pad_size):
+        bbox_copy = (np.append(bbox_copy, object_bbox_np[0].reshape(1,5), axis = 0))
+
+    bbox_copy[:, 0] = np.arange(bbox_copy.shape[0]) + 1 #
+    
+    return bbox_copy  
