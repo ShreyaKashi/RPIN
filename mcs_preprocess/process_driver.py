@@ -9,10 +9,10 @@ import shutil
 import pickle
 import cv2
 
-mcs_root_dir = "/home/eris/Desktop/MCS/Dataset/eval5_validation_renamed/eval5_validation_set"
-# output_dir = "/home/kashis/Desktop/RPIN/data/MCS_1/"
-STORE_PATH="/home/eris/Desktop/MCS/store"
-output_dir_SS = "/home/eris/Desktop/MCS/Eval7/out_ss"
+MCS_ROOT_DIR = os.getenv("MCS_ROOT_DIR")
+STORE_PATH = os.getenv("STORE_PATH")
+OUTPUT_DIR = os.getenv("OUTPUT_DIR")
+
 MAX_OBJS = 4
 
 def get_obj_entrance_events(seq):
@@ -35,13 +35,13 @@ def get_obj_exit_events(seq):
 
 def get_reqd_scenes_list():
     scene_list = []
-    for scene_name in os.listdir(mcs_root_dir):
+    for scene_name in os.listdir(MCS_ROOT_DIR):
 
         # Get only plaus scenes with no occluders
         if "implaus" in scene_name:
             continue
 
-        folder_path = os.path.join(mcs_root_dir, scene_name)
+        folder_path = os.path.join(MCS_ROOT_DIR, scene_name)
         rgb_folder = os.path.join(folder_path, "RGB")
         seg_mask = os.path.join(folder_path, "Mask")
         
@@ -59,7 +59,7 @@ def get_reqd_scenes_list():
     
 def get_step_processed_out(scene_name):
     
-    scene_path = f"{mcs_root_dir}/{scene_name}"
+    scene_path = f"{MCS_ROOT_DIR}/{scene_name}"
     scene_metadata = utils.get_scene_metadata(
         scene_path, scene_name, store_path=STORE_PATH, load=False, save=False
     )
@@ -107,8 +107,6 @@ def get_max_vid_len(reqd_scenes, recompute=False):
         return 34
 
 
-
-
 scene_folder_name_init = '0000'
 
 reqd_scenes = get_reqd_scenes_list()
@@ -116,7 +114,7 @@ max_vid_len = get_max_vid_len(reqd_scenes, False)
 
 for scene_name in reqd_scenes:
 
-    scene_folder_path = os.path.join(mcs_root_dir, scene_name)
+    scene_folder_path = os.path.join(MCS_ROOT_DIR, scene_name)
     rgb_folder = os.path.join(scene_folder_path, "RGB")
     seg_mask = os.path.join(scene_folder_path, "Mask")
     
@@ -130,15 +128,15 @@ for scene_name in reqd_scenes:
     # Trim videos and create a new dir
     for idx, frame_id in enumerate(range(vid_start_frame, vid_start_frame + max_vid_len)):
         src = rgb_folder + "/" + str(frame_id).zfill(6) + ".png"
-        dst = output_dir_SS + scene_folder_name_init
+        dst = OUTPUT_DIR + scene_folder_name_init
         target_file_name = str(idx).zfill(3) + ".png"
         loaded_src_img = cv2.cvtColor(
                        cv2.imread(src),
                        cv2.COLOR_BGR2RGB,
                    )
         
-        if not os.path.exists(str(output_dir_SS) + scene_folder_name_init):
-           os.makedirs(str(output_dir_SS) + scene_folder_name_init)
+        if not os.path.exists(str(OUTPUT_DIR) + scene_folder_name_init):
+           os.makedirs(str(OUTPUT_DIR) + scene_folder_name_init)
         cv2.imwrite(os.path.join(dst, target_file_name), loaded_src_img)
 
 
@@ -170,17 +168,14 @@ for scene_name in reqd_scenes:
         obj_mask_list.append(temp_obj_mask_list)
     
     obj_bbox_np = np.asarray(obj_bbox_list, dtype=np.float64)
-    bbox_dst = output_dir_SS + scene_folder_name_init + "_boxes.pkl"
+    bbox_dst = OUTPUT_DIR + scene_folder_name_init + "_boxes.pkl"
     pickle.dump(obj_bbox_np, open(bbox_dst, "wb"))
 
     obj_mask_np = np.asarray(obj_mask_list, dtype=np.float64)
-    mask_dst = output_dir_SS + scene_folder_name_init + "_masks.pkl"
+    mask_dst = OUTPUT_DIR + scene_folder_name_init + "_masks.pkl"
     pickle.dump(obj_mask_np, open(mask_dst, "wb"))
 
-
-             
-
-    # scene_folder_name_init = str(int(scene_folder_name_init) + 1).zfill(4)
+    scene_folder_name_init = str(int(scene_folder_name_init) + 1).zfill(4)
 
 
 
