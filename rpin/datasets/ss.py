@@ -32,6 +32,7 @@ class SS(Phys):
     def _parse_image(self, video_name, vid_idx, img_idx):
         image_list = sorted(glob(f'{video_name}/*{self.image_ext}'))
         image_list = image_list[img_idx:img_idx + self.input_size]
+        
         data = np.array([
             cv2.imread(image_name) for image_name in image_list
         ], dtype=np.float).transpose((0, 3, 1, 2))

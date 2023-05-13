@@ -88,7 +88,8 @@ def main():
     torch.manual_seed(rng_seed)
     train_set = eval(f'{cfg.DATASET_ABS}')(data_root=cfg.DATA_ROOT, split='train', image_ext=cfg.RPIN.IMAGE_EXT)
     val_set = eval(f'{cfg.DATASET_ABS}')(data_root=cfg.DATA_ROOT, split='test', image_ext=cfg.RPIN.IMAGE_EXT)
-    kwargs = {'pin_memory': True, 'num_workers': 0} #TODO: originally num_workers is 16, changed to 0 to pdb
+    kwargs = {'pin_memory': True, 'num_workers': 2} #TODO: originally num_workers is 16, changed to 0 to pdb
+    
     train_loader = torch.utils.data.DataLoader(
         train_set, batch_size=cfg.SOLVER.BATCH_SIZE, shuffle=True, **kwargs,
     )
