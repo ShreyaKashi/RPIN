@@ -7,7 +7,6 @@ from collections import defaultdict
 
 import cv2
 import numpy as np
-from loguru import logger
 from scipy import ndimage
 
 from objects import *
@@ -579,7 +578,7 @@ def get_structural_object_list(
                 if "pole" in obj_name:
                     is_pole = True
                 elif "wall" not in obj_name:
-                    logger.error("unknown occluder")
+                    print("unknown occluder")
                     exit()
             elif "placer" in obj_name:
                 is_pole = True
