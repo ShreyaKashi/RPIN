@@ -4,6 +4,7 @@ import random
 import numpy as np
 from glob import glob
 from torch.utils.data import Dataset
+from copy import deepcopy
 
 from rpin.utils.config import _C as C
 from rpin.utils.bbox import xyxy2xywh
@@ -32,11 +33,13 @@ class Phys(Dataset):
     def __getitem__(self, idx):
         vid_idx, img_idx = self.video_info[idx, 0], self.video_info[idx, 1]
         video_name, anno_name = self.video_list[vid_idx], self.anno_list[vid_idx]
-        if C.RPIN.VAE:
-            data, data_t = self._parse_image(video_name, vid_idx, img_idx)
-        else:
-            data = self._parse_image(video_name, vid_idx, img_idx)
-            data_t = data.copy()
+        data, data_t = self._parse_image(video_name, vid_idx, img_idx)
+        # if C.RPIN.VAE:
+        #     data, data_t = self._parse_image(video_name, vid_idx, img_idx)
+        # else:
+        #     data = self._parse_image(video_name, vid_idx, img_idx) #NOTE: since this is tuple of array, got only the first element
+        #     data_t = data.copy()
+            
 
         boxes, gt_masks = self._parse_label(anno_name, vid_idx, img_idx)
 
