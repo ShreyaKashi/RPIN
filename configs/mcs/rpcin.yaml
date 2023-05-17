@@ -1,6 +1,6 @@
 # MCS RPCIN YAML
 OUTPUT_DIR: ./outputs/phys
-DATA_ROOT: '/home/kalyanav/MS_thesis/RPIN_MCS/data/MCS_SS'
+DATA_ROOT: '/home/kashis/Desktop/Eval7/RPIN/data/ss_mcs_out_dataset'
 DATASET_ABS: 'SS'
 SOLVER:
   BASE_LR: 2.0e-4  # single GPU LR
@@ -8,7 +8,7 @@ SOLVER:
   SCHEDULER: 'cosine'
   MAX_ITERS: 1000000
   WARMUP_ITERS: 40000
-  VAL_INTERVAL: 100000
+  VAL_INTERVAL: 200000
   BATCH_SIZE: 5 # single GPU Batch Size
 INPUT: #TODO: Need to change the mean and std across
   IMAGE_MEAN: [ 82.94735451,  92.58477129, 100.01230156]
@@ -22,7 +22,7 @@ RPIN:
   # prediction setting:
   INPUT_SIZE: 1
   PRED_SIZE_TRAIN: 15
-  PRED_SIZE_TEST: 30
+  PRED_SIZE_TEST: 29
   # input setting:
   INPUT_HEIGHT: 224
   INPUT_WIDTH: 224
