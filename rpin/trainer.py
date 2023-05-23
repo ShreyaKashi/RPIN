@@ -82,7 +82,7 @@ class Trainer(object):
             tprint(print_msg)
 
             if self.iterations % self.val_interval == 0:
-                self.snapshot()
+                self.snapshot(str(self.iterations) + '.path.tar')
                 self.val()
                 self._init_loss()
                 self.model.train()

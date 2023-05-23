@@ -22,6 +22,8 @@ MAX_OBJS = 4
 SCALED_X = 224
 SCALED_Y = 224
 
+MIN_VID_LEN = 30
+
 def get_obj_entrance_events(seq):
         objEntranceEventDict = {}
 
@@ -95,7 +97,7 @@ def get_vid_start_len(scene_name, seq, states_dict_2):
         assert len(all_focused_obj_ids) == 1
         focused_obj_id = all_focused_obj_ids[0]
 
-
+        print("Scene name in grav: ", scene_name)
         for frame_id in range(placer_entrance_frame+2, len(seq.obj_by_frame)):
             if not utils.isPlacerAttached_v1(focused_obj_id, frame_id, states_dict_2):
                 detached_frame = frame_id
@@ -126,7 +128,7 @@ def get_max_vid_len(reqd_scenes, recompute=False):
         return min(common_vid_len)
  
     else:
-        return 34
+        return MIN_VID_LEN
 
 
 def copy_process_images(frame_id, idx, rgb_folder, scene_folder_name_init):
@@ -138,14 +140,29 @@ def copy_process_images(frame_id, idx, rgb_folder, scene_folder_name_init):
                    cv2.imread(src),
                    cv2.COLOR_BGR2RGB,
                )
-    
+    resized_img = cv2.resize(loaded_src_img, (SCALED_X, SCALED_Y))
+
     if not os.path.exists(str(OUTPUT_DIR) + "/" + scene_folder_name_init):
        os.makedirs(str(OUTPUT_DIR) + "/" + scene_folder_name_init)
-    cv2.imwrite(os.path.join(dst, target_file_name), loaded_src_img)
+    cv2.imwrite(os.path.join(dst, target_file_name), resized_img)
+
+
+# def viz(bbox_new_val, frame_id, idx, rgb_folder, scene_folder_name_init):
+#     # TODO: Resize images to 224x224
+#     src = rgb_folder + "/" + str(frame_id).zfill(6) + ".png"
+#     dst = OUTPUT_DIR + "/" + scene_folder_name_init
+#     target_file_name = str(idx).zfill(3) + ".png"
+#     loaded_src_img = cv2.cvtColor(
+#                    cv2.imread(src),
+#                    cv2.COLOR_BGR2RGB,
+#                )
+#     resized_img = cv2.resize(loaded_src_img, (SCALED_X, SCALED_Y))
+#     print("test")
+
 
 scene_folder_name_init = '0000'
 
-empty_vals_scenes = ["eval_5_validation_passive_stc_0001_15_plaus"]
+# empty_vals_scenes = ["grav_new6_000004_01_zz_plaus_6n"]
 
 reqd_scenes = get_reqd_scenes_list()
 max_vid_len = get_max_vid_len(reqd_scenes, False)
@@ -157,9 +174,13 @@ for scene_name in reqd_scenes:
     seg_mask = os.path.join(scene_folder_path, "Mask")
     
     expected_tracks, scene_metadata, seq, states_dict_2 = get_step_processed_out(scene_name)
-    vid_len = len(seq.obj_by_frame)
+    vid_len = len(seq.mask_per_frame)
+
+    # obj re-enters the scene
+    if not list(seq.obj_by_frame.keys()) == list(range(min(seq.obj_by_frame.keys()), max(seq.obj_by_frame.keys())+1)): continue
     
     vid_start_frame, trimmed_vid_len = get_vid_start_len(scene_name, seq, states_dict_2)
+    if trimmed_vid_len < MIN_VID_LEN: continue
 
     obj_bbox_list = []
     obj_mask_list = []
@@ -177,9 +198,13 @@ for scene_name in reqd_scenes:
                 bbox_vals = v["2dbbox"][frame_id]
                 
                 # bbox values reshaped
-                bbox_new_val = utils.bbox_scaler(bbox_vals, SCALED_X, SCALED_Y)
+                bbox_new_val = utils.bbox_scaler(scene_name, frame_id, bbox_vals, SCALED_X, SCALED_Y)
+                
                 temp_obj_bbox_dict.append([k, bbox_new_val[0], bbox_new_val[1], bbox_new_val[0] + bbox_new_val[2], bbox_new_val[1] + bbox_new_val[3]])
                 
+                bbox_send_vals = [bbox_new_val[0], bbox_new_val[1], bbox_new_val[0] + bbox_new_val[2], bbox_new_val[1] + bbox_new_val[3]]
+                # viz(bbox_send_vals, frame_id, idx, rgb_folder, scene_folder_name_init)
+
                 seg_color_frame = expected_tracks[k]["content"][frame_id]["segment_color"]
                 mask_img = cv2.cvtColor(
                      cv2.imread(f"{scene_folder_path}/Mask/{frame_id:06d}.png"),
@@ -204,6 +229,7 @@ for scene_name in reqd_scenes:
         obj_mask_list.append(temp_obj_mask_list)
     
     if len(obj_bbox_list)!= 0:
+        print("Scene name: ", scene_name)
         obj_bbox_np = np.asarray(obj_bbox_list, dtype=np.float64)
         bbox_dst = OUTPUT_DIR + "/" + scene_folder_name_init + "_boxes.pkl"
         pickle.dump(obj_bbox_np, open(bbox_dst, "wb"))

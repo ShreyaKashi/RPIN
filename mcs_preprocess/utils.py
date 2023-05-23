@@ -746,6 +746,10 @@ def isPlacerAttached_v1(currObjId, curr_frame_no, states_dict):
             if states_dict[objId]["is_pole"]:
                 placer_objId = objId
 
+                # placer doesn't exist in curr_frame_no
+                if states_dict[placer_objId]["2dbbox"][curr_frame_no] == None:
+                    return False
+
                 placer_top_y_coord = states_dict[placer_objId]["2dbbox"][
                     curr_frame_no
                 ][1]
@@ -865,7 +869,7 @@ def createObjStateDict(obj_by_frame, obj_by_id, vid_len):
     return state_dict
 
 
-def bbox_scaler(bbox_val, scaled_x, scaled_y):
+def bbox_scaler(scene_name, frame_id, bbox_val, scaled_x, scaled_y):
     """Scales the bounding box values based on the change of size
     """
     bbox_new_val = copy.deepcopy(bbox_val)
@@ -876,8 +880,8 @@ def bbox_scaler(bbox_val, scaled_x, scaled_y):
     bbox_new_val[0] = bbox_val[0] * scale[0]
     bbox_new_val[2] = bbox_val[2] * scale[0]
 
-    bbox_new_val[1] = bbox_val[1] * scale[0]
-    bbox_new_val[3] = bbox_val[3] * scale[0]
+    bbox_new_val[1] = bbox_val[1] * scale[1]
+    bbox_new_val[3] = bbox_val[3] * scale[1]
     
     return bbox_new_val
 
