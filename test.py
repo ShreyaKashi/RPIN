@@ -19,7 +19,7 @@ def arg_parse():
     parser.add_argument('--cfg', required=True, help='path to config file', type=str)
     parser.add_argument('--predictor-init', type=str, help='', default=None)
     parser.add_argument('--predictor-arch', type=str, default=None)
-    parser.add_argument('--plot-image', type=int, default=0, help='how many images are plotted')
+    parser.add_argument('--plot-image', type=int, default=15, help='how many images are plotted')
     parser.add_argument('--gpus', type=str)
     parser.add_argument('--eval', type=str, default=None)
     # below are only for PHYRE planning
