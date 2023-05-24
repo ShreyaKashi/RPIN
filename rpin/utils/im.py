@@ -20,7 +20,7 @@ def get_im_data(im_name, gt_rois, data_root, high_res):
         im_data = _get_phyre_im(im_name, high_res)
     elif 'shape-stack' in data_root:
         im_data = _get_ss_im(im_name)
-    elif 'mcs' in data_root:
+    elif 'MCS_SS' in data_root:
         im_data = _get_ss_im(im_name)
     else:
         raise NotImplementedError

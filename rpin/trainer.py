@@ -80,7 +80,7 @@ class Trainer(object):
             print_msg += f" | speed: {speed:.1f} | eta: {eta:.2f} h"
             print_msg += (" " * (os.get_terminal_size().columns - len(print_msg) - 10))
             tprint(print_msg)
-
+            
             if self.iterations % self.val_interval == 0:
                 self.snapshot(str(self.iterations) + '.path.tar')
                 self.val()
