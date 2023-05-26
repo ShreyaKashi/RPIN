@@ -80,7 +80,7 @@ def main():
     split_name = 'test'
     val_set = eval(f'{C.DATASET_ABS}')(data_root=C.DATA_ROOT, split=split_name, image_ext=C.RPIN.IMAGE_EXT)
     batch_size = 1 if C.RPIN.VAE else C.SOLVER.BATCH_SIZE * num_gpus
-    val_loader = DataLoader(val_set, batch_size=batch_size, num_workers=16)
+    val_loader = DataLoader(val_set, batch_size=batch_size, num_workers=0)
 
     model = eval(args.predictor_arch + '.Net')()
     model.to(torch.device('cuda'))

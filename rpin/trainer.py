@@ -162,6 +162,7 @@ class Trainer(object):
         self.logger.info(print_msg)
 
     def loss(self, outputs, labels, phase):
+        
         self.loss_cnt += labels['boxes'].shape[0]
         pred_size = eval(f'self.p{phase}_size')
         # calculate bbox loss
@@ -169,20 +170,24 @@ class Trainer(object):
         loss = (outputs['boxes'] - labels['boxes']) ** 2
         # take weighted sum over axis 2 (objs dim) since some index are not valid
         valid = labels['valid'][:, None, :, None]
-        loss = loss * valid
+        loss = loss * valid # element wise matrix multiplication
         loss = loss.sum(2) / valid.sum(2)
-        loss *= self.position_loss_weight
-
+        loss *= self.position_loss_weight #The loss shape is now (batch, time, 4) 
+        
+        # ------------------------------------------------------------    
+        #   p is (x_1, y_1) and s is (x_2, y_2) bounding box values
+        # -----------------------------------------------------------
+        
         for i in range(pred_size):
-            self.box_p_step_losses[i] += loss[:, i, :2].sum().item()
-            self.box_s_step_losses[i] += loss[:, i, 2:].sum().item()
-
-        self.losses['p_1'] = float(np.mean(self.box_p_step_losses[:self.ptrain_size]))
+            self.box_p_step_losses[i] += loss[:, i, :2].sum().item() # sum of elements of first two columns of the loss per time frame
+            self.box_s_step_losses[i] += loss[:, i, 2:].sum().item() # sum of elements of last two columns of the loss per time frame
+        import pdb; pdb.set_trace()
+        self.losses['p_1'] = float(np.mean(self.box_p_step_losses[:self.ptrain_size])) #[0, T_train]
         self.losses['p_2'] = float(np.mean(self.box_p_step_losses[self.ptrain_size:])) \
-            if self.ptrain_size < self.ptest_size else 0
-        self.losses['s_1'] = float(np.mean(self.box_s_step_losses[:self.ptrain_size]))
+            if self.ptrain_size < self.ptest_size else 0 #[T_train, T_test left]
+        self.losses['s_1'] = float(np.mean(self.box_s_step_losses[:self.ptrain_size])) #[0, T_train]
         self.losses['s_2'] = float(np.mean(self.box_s_step_losses[self.ptrain_size:])) \
-            if self.ptrain_size < self.ptest_size else 0
+            if self.ptrain_size < self.ptest_size else 0 #[T_train, T_test left]
 
         mask_loss = 0
         if C.RPIN.MASK_LOSS_WEIGHT > 0:

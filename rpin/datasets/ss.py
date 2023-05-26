@@ -7,7 +7,7 @@ from glob import glob
 from rpin.datasets.phys import Phys
 from rpin.utils.misc import tprint
 from rpin.utils.config import _C as C
-
+import pdb
 
 class SS(Phys):
     def __init__(self, data_root, split, image_ext='.jpg'):
@@ -30,6 +30,7 @@ class SS(Phys):
             self.video_info = np.vstack((self.video_info, video_info_t))
 
     def _parse_image(self, video_name, vid_idx, img_idx):
+       
         image_list = sorted(glob(f'{video_name}/*{self.image_ext}'))
         image_list = image_list[img_idx:img_idx + self.input_size]
         data = np.array([
