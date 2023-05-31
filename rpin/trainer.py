@@ -173,41 +173,45 @@ class Trainer(object):
         loss = loss * valid # element wise matrix multiplication
         loss = loss.sum(2) / valid.sum(2)
         loss *= self.position_loss_weight #The loss shape is now (batch, time, 4) 
-        
+        import pdb; pdb.set_trace()
         # ------------------------------------------------------------    
-        #   p is (x_1, y_1) and s is (x_2, y_2) bounding box values
+        #   p is bbox loss and s is scaled bbox loss
         # -----------------------------------------------------------
         
         for i in range(pred_size):
             self.box_p_step_losses[i] += loss[:, i, :2].sum().item() # sum of elements of first two columns of the loss per time frame
             self.box_s_step_losses[i] += loss[:, i, 2:].sum().item() # sum of elements of last two columns of the loss per time frame
-        import pdb; pdb.set_trace()
+        
         self.losses['p_1'] = float(np.mean(self.box_p_step_losses[:self.ptrain_size])) #[0, T_train]
         self.losses['p_2'] = float(np.mean(self.box_p_step_losses[self.ptrain_size:])) \
-            if self.ptrain_size < self.ptest_size else 0 #[T_train, T_test left]
+            if self.ptrain_size < self.ptest_size else 0 #[T_train, T_test leftover]
         self.losses['s_1'] = float(np.mean(self.box_s_step_losses[:self.ptrain_size])) #[0, T_train]
         self.losses['s_2'] = float(np.mean(self.box_s_step_losses[self.ptrain_size:])) \
-            if self.ptrain_size < self.ptest_size else 0 #[T_train, T_test left]
+            if self.ptrain_size < self.ptest_size else 0 #[T_train, T_test leftover]
 
+        # mask loss calculation starts here
         mask_loss = 0
         if C.RPIN.MASK_LOSS_WEIGHT > 0:
+            
             # of shape (batch, time, #obj, m_sz, m_sz)
             mask_loss_ = F.binary_cross_entropy(outputs['masks'], labels['masks'], reduction='none')
-            mask_loss = mask_loss_.mean((3, 4))
+            mask_loss = mask_loss_.mean((3, 4)) # taking the mean of 3rd and 4th index
+            # mask_loss shape is (batch, time, obj#)
+            # take weighted sum over axis 2 (objs dim) since some index are not valid
             valid = labels['valid'][:, None, :]
             mask_loss = mask_loss * valid
-            mask_loss = mask_loss.sum(2) / valid.sum(2)
+            mask_loss = mask_loss.sum(2) / valid.sum(2) # shape is now (batch, time)
 
             for i in range(pred_size):
-                self.masks_step_losses[i] += mask_loss[:, i].sum().item()
+                self.masks_step_losses[i] += mask_loss[:, i].sum().item() #sum per time frame and added 
 
-            m1_loss = self.masks_step_losses[:self.ptrain_size]
-            m2_loss = self.masks_step_losses[self.ptrain_size:]
-            self.losses['m_1'] = np.mean(m1_loss)
-            self.losses['m_2'] = np.mean(m2_loss) if self.ptrain_size < self.ptest_size else 0
-
-            mask_loss = mask_loss.mean(0)
-            init_tau = C.RPIN.DISCOUNT_TAU ** (1 / self.ptrain_size)
+            m1_loss = self.masks_step_losses[:self.ptrain_size] # [0, T_train]
+            m2_loss = self.masks_step_losses[self.ptrain_size:] # [T_train, rest]
+            self.losses['m_1'] = np.mean(m1_loss) # [0, T_train] mean again
+            self.losses['m_2'] = np.mean(m2_loss) if self.ptrain_size < self.ptest_size else 0  # [T_train, rest] mean again
+            
+            mask_loss = mask_loss.mean(0) # mean across batches
+            init_tau = C.RPIN.DISCOUNT_TAU ** (1 / self.ptrain_size) #Here tau is temperature 
             tau = init_tau + (self.iterations / self.max_iters) * (1 - init_tau)
             tau = torch.pow(tau, torch.arange(pred_size, out=torch.FloatTensor()))[:, None].to('cuda')
             mask_loss = ((mask_loss * tau) / tau.sum(axis=0, keepdims=True)).sum()
