@@ -1,6 +1,6 @@
 # MCS RPCIN YAML
 OUTPUT_DIR: ./outputs/phys
-DATA_ROOT: '/home/kashis/Desktop/Eval7/RPIN/data/ss_mcs_out_dataset'
+DATA_ROOT: '/home/kashis/Desktop/Eval7/RPIN/data/withDepth_384x256'
 DATASET_ABS: 'SS'
 SOLVER:
   BASE_LR: 2.0e-4  # single GPU LR
