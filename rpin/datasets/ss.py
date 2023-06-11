@@ -57,7 +57,7 @@ class SS(Phys):
             data_depth[:, c] -= np.mean(C.INPUT.IMAGE_MEAN)
             data_depth[:, c] /= np.mean(C.INPUT.IMAGE_STD)
 
-        combined_data = np.concatenate([data, data_depth], 1)
+        # combined_data = np.concatenate([data, data_depth], 1)
 
         image_list = [sorted(glob(f'{video_name}/*{self.image_ext}'))[img_idx + self.seq_size - 1]]
         data_t = np.array([
