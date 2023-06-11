@@ -18,9 +18,9 @@ MCS_ROOT_DIR = os.getenv("MCS_ROOT_DIR")
 STORE_PATH = os.getenv("STORE_PATH")
 OUTPUT_DIR = os.getenv("OUTPUT_DIR")
 
-MAX_OBJS = 4
-SCALED_X = 224
-SCALED_Y = 224
+MAX_OBJS = 3
+SCALED_X = 384
+SCALED_Y = 256
 
 MIN_VID_LEN = 30
 
@@ -131,10 +131,10 @@ def get_max_vid_len(reqd_scenes, recompute=False):
         return MIN_VID_LEN
 
 
-def copy_process_images(frame_id, idx, rgb_folder, scene_folder_name_init):
+def copy_process_images(frame_id, idx, folder_path, scene_folder_name_init, depth_prefix=""):
     # TODO: Resize images to 224x224
-    src = rgb_folder + "/" + str(frame_id).zfill(6) + ".png"
-    dst = OUTPUT_DIR + "/" + scene_folder_name_init
+    src = folder_path + "/" + str(frame_id).zfill(6) + ".png"
+    dst = OUTPUT_DIR + "/" + scene_folder_name_init + depth_prefix
     target_file_name = str(idx).zfill(3) + ".png"
     loaded_src_img = cv2.cvtColor(
                    cv2.imread(src),
@@ -142,8 +142,8 @@ def copy_process_images(frame_id, idx, rgb_folder, scene_folder_name_init):
                )
     resized_img = cv2.resize(loaded_src_img, (SCALED_X, SCALED_Y))
 
-    if not os.path.exists(str(OUTPUT_DIR) + "/" + scene_folder_name_init):
-       os.makedirs(str(OUTPUT_DIR) + "/" + scene_folder_name_init)
+    if not os.path.exists(str(OUTPUT_DIR) + "/" + scene_folder_name_init + depth_prefix):
+       os.makedirs(str(OUTPUT_DIR) + "/" + scene_folder_name_init + depth_prefix)
     cv2.imwrite(os.path.join(dst, target_file_name), resized_img)
 
 
@@ -167,11 +167,14 @@ scene_folder_name_init = '0000'
 reqd_scenes = get_reqd_scenes_list()
 max_vid_len = get_max_vid_len(reqd_scenes, False)
 
+scenes_generated = 0
+
 for scene_name in reqd_scenes:
 
     scene_folder_path = os.path.join(MCS_ROOT_DIR, scene_name)
     rgb_folder = os.path.join(scene_folder_path, "RGB")
     seg_mask = os.path.join(scene_folder_path, "Mask")
+    depth_folder = os.path.join(scene_folder_path, "Depth")
     
     expected_tracks, scene_metadata, seq, states_dict_2 = get_step_processed_out(scene_name)
     vid_len = len(seq.mask_per_frame)
@@ -189,6 +192,7 @@ for scene_name in reqd_scenes:
     for idx, frame_id in enumerate(range(vid_start_frame, min(vid_start_frame + max_vid_len, vid_len))):
         
         copy_process_images(frame_id, idx, rgb_folder, scene_folder_name_init)
+        copy_process_images(frame_id, idx, depth_folder, scene_folder_name_init, depth_prefix="_depth")
 
         temp_obj_bbox_dict = []
         temp_obj_mask_list = []
@@ -237,6 +241,8 @@ for scene_name in reqd_scenes:
         obj_mask_np = np.asarray(obj_mask_list, dtype=np.float64)
         mask_dst = OUTPUT_DIR + "/" + scene_folder_name_init + "_masks.pkl"
         pickle.dump(obj_mask_np, open(mask_dst, "wb"))
+
+        scenes_generated += 1
     else:
         # TODO: Check why flow goes here
         import pdb; pdb.set_trace()
@@ -245,4 +251,4 @@ for scene_name in reqd_scenes:
 
 
 
-
+print("SCENES GENERATED: ", scenes_generated)

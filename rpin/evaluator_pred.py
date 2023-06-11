@@ -104,7 +104,7 @@ class PredEvaluator(object):
                         video_idx, img_idx = self.val_loader.dataset.video_info[plot_image_idx]
                         video_name = self.val_loader.dataset.video_list[video_idx]
 
-                        v = valid[i].numpy().astype(np.bool)
+                        v = valid[i].numpy().astype(bool)
                         pred_boxes_i = outputs['boxes'][i][:, v]
                         gt_boxes_i = labels['boxes'][i][:, v]
 

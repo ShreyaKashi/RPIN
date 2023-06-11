@@ -12,6 +12,8 @@ from rpin.utils.logger import setup_logger, git_diff_config
 from rpin.models import *
 from rpin.trainer import Trainer
 
+class DObj(object):
+    pass
 
 def arg_parse():
     parser = argparse.ArgumentParser(description='RPIN Parameters')
@@ -34,6 +36,11 @@ def main():
 
     # ---- setup training environment
     args = arg_parse()
+
+    # args_dict = {'cfg': 'configs/mcs/rpcin.yaml', 'output': 'train_ptrain20_may31', 'gpus': '0', 'seed': 0, 'init': None}
+    # args = DObj()
+    # args.__dict__ = args_dict
+
     rng_seed = args.seed
     random.seed(rng_seed)
     np.random.seed(rng_seed)
@@ -88,7 +95,7 @@ def main():
     torch.manual_seed(rng_seed)
     train_set = eval(f'{cfg.DATASET_ABS}')(data_root=cfg.DATA_ROOT, split='train', image_ext=cfg.RPIN.IMAGE_EXT)
     val_set = eval(f'{cfg.DATASET_ABS}')(data_root=cfg.DATA_ROOT, split='test', image_ext=cfg.RPIN.IMAGE_EXT)
-    kwargs = {'pin_memory': True, 'num_workers': 2}
+    kwargs = {'pin_memory': True, 'num_workers': 4}
     train_loader = torch.utils.data.DataLoader(
         train_set, batch_size=cfg.SOLVER.BATCH_SIZE, shuffle=True, **kwargs,
     )

@@ -13,13 +13,15 @@ from rpin.utils.config import _C as C
 from rpin.evaluator_plan import PlannerPHYRE
 from rpin.evaluator_pred import PredEvaluator
 
+class DObj(object):
+    pass
 
 def arg_parse():
     parser = argparse.ArgumentParser(description='RPIN parameters')
     parser.add_argument('--cfg', required=True, help='path to config file', type=str)
     parser.add_argument('--predictor-init', type=str, help='', default=None)
     parser.add_argument('--predictor-arch', type=str, default=None)
-    parser.add_argument('--plot-image', type=int, default=15, help='how many images are plotted')
+    parser.add_argument('--plot-image', type=int, default=60, help='how many images are plotted')
     parser.add_argument('--gpus', type=str)
     parser.add_argument('--eval', type=str, default=None)
     # below are only for PHYRE planning
@@ -31,6 +33,10 @@ def arg_parse():
 def main():
     args = arg_parse()
     pprint(vars(args))
+    # DIR = "rgbd_0606"
+    # args_dict = {'cfg': 'outputs/phys/home/{DIR}/config.yaml', 'predictor_init': 'outputs/phys/home/{DIR}}/ckpt_best.path.tar', 'predictor_arch': 'rpcin', 'plot_image': 15, 'gpus': '0', 'eval': None, 'start_id': 0, 'end_id': 0}
+    # args = DObj()
+    # args.__dict__ = args_dict
     random.seed(0)
     np.random.seed(0)
     torch.manual_seed(0)
@@ -80,7 +86,7 @@ def main():
     split_name = 'test'
     val_set = eval(f'{C.DATASET_ABS}')(data_root=C.DATA_ROOT, split=split_name, image_ext=C.RPIN.IMAGE_EXT)
     batch_size = 1 if C.RPIN.VAE else C.SOLVER.BATCH_SIZE * num_gpus
-    val_loader = DataLoader(val_set, batch_size=batch_size, num_workers=16)
+    val_loader = DataLoader(val_set, batch_size=batch_size, num_workers=1)
 
     model = eval(args.predictor_arch + '.Net')()
     model.to(torch.device('cuda'))

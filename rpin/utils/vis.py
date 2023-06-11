@@ -148,7 +148,7 @@ def plot_rollouts(im_data, pred_boxes, gt_boxes, pred_masks=None, gt_masks=None,
         gt_mask_im = im_data.copy()
         pred_mask_im = im_data.copy()
         for o_id in range(num_objs):
-            gt_bbox_t_o = np.maximum(np.minimum(np.round(gt_boxes[t_id, o_id]).astype(np.int), C.RPIN.INPUT_WIDTH - 1), 0)
+            gt_bbox_t_o = np.maximum(np.minimum(np.round(gt_boxes[t_id, o_id]).astype(int), C.RPIN.INPUT_WIDTH - 1), 0)
             gt_mask_t_o = cv2.resize(gt_masks[t_id, o_id], (gt_bbox_t_o[2] - gt_bbox_t_o[0] + 1,
                                                             gt_bbox_t_o[3] - gt_bbox_t_o[1] + 1))
             gt_mask_t_o = (gt_mask_t_o >= 0.5)
@@ -156,7 +156,7 @@ def plot_rollouts(im_data, pred_boxes, gt_boxes, pred_masks=None, gt_masks=None,
                 gt_mask_im[gt_bbox_t_o[1]:gt_bbox_t_o[3] + 1,
                            gt_bbox_t_o[0]:gt_bbox_t_o[2] + 1, c_id][gt_mask_t_o] = mask_colors[o_id][c_id]
 
-            pred_bbox_t_o = np.maximum(np.minimum(np.round(pred_boxes[t_id, o_id]).astype(np.int), C.RPIN.INPUT_WIDTH - 1), 0)
+            pred_bbox_t_o = np.maximum(np.minimum(np.round(pred_boxes[t_id, o_id]).astype(int), C.RPIN.INPUT_WIDTH - 1), 0)
             pred_mask_t_o = cv2.resize(pred_masks[t_id, o_id], (pred_bbox_t_o[2] - pred_bbox_t_o[0] + 1,
                                                                 pred_bbox_t_o[3] - pred_bbox_t_o[1] + 1))
             pred_mask_t_o = (pred_mask_t_o >= 0.5)
