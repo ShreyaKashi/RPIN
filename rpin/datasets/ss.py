@@ -67,7 +67,7 @@ class SS(Phys):
             data_t[:, c] -= C.INPUT.IMAGE_MEAN[c]
             data_t[:, c] /= C.INPUT.IMAGE_STD[c]
 
-        return combined_data, data_t
+        return data, data_t
 
     def _parse_label(self, anno_name, vid_idx, img_idx):
         with open(anno_name, 'rb') as f:

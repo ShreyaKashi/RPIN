@@ -18,7 +18,7 @@ _C.INPUT = CfgNode()
 _C.INPUT.PRELOAD_TO_MEMORY = False
 _C.INPUT.IMAGE_MEAN = [0, 0, 0]
 _C.INPUT.IMAGE_STD = [1.0, 1.0, 1.0]
-_C.INPUT.IMAGE_CHANNEL = 4
+_C.INPUT.IMAGE_CHANNEL = 3
 # ---------------------------------------------------------------------------- #
 # Solver
 # ---------------------------------------------------------------------------- #
