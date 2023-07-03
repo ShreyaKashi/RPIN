@@ -220,7 +220,7 @@ def obtain_amodal_center(objs, cam):
     scale = np.divide(rescaled_shape, img_shape)
     
     amodal_center_all = {}
-    obj_number = 1
+    # obj_number = 1
     obj_all=[]
     for obj in objs:
         x = 0
@@ -240,8 +240,8 @@ def obtain_amodal_center(objs, cam):
         x = int(img_coords[0] / img_coords[2])
         y = int(img_coords[1] / img_coords[2])
         amodal_center_all[obj.obj_id] = [x, y]
-        obj_all.append([obj_number, x*scale[0], y*scale[1], cam_coords[2]])
-        obj_number+=1
+        obj_all.append([x*scale[0], y*scale[1], cam_coords[2]])
+        # obj_number+=1
 
     return amodal_center_all, obj_all
 
@@ -298,3 +298,24 @@ def compare_original_and_reconstructed_3D_amodal_ctr(reconstructed_3D_amodal_ctr
         assert(np.sum(np.isclose(cam_coords[:3], rec_coords, rtol=0.1)) == rec_coords.shape[0])
 
     
+def read_objs_new(data, frame, obj_name):
+    
+    obj_list = []
+    for obj_id in data['object_list']:
+        if obj_id in obj_name:
+            if data['object_list'][obj_id]['visible'] == True:
+                obj = Object()
+                obj.set_object_info(data['object_list'], frame, obj_id)
+                obj_list.append(obj)
+
+    exclude_id = ['floor', 'wall_left', 'wall_right', 'wall_front', 'wall_back']
+    for obj_id in data['structural_object_list']:
+        if obj_id in exclude_id:
+            continue
+        if obj_id in obj_name:
+            obj = Object()
+            obj.set_object_info(data['structural_object_list'], frame, obj_id)
+            obj_list.append(obj)
+
+    return obj_list
+

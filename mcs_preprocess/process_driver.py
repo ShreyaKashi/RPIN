@@ -86,8 +86,6 @@ def get_step_processed_out(scene_name):
         provide_shape=True,
     )
 
-    # print('expected_tracks',expected_tracks)
-
     seq = utils.get_metadata_from_pipleine(expected_tracks, scene_metadata, vid_len_details)
     states_dict_2 = utils.preprocessing(vid_len_details, seq, scene_metadata)
 
@@ -208,7 +206,7 @@ for scene_name in reqd_scenes:
     obj_bbox_list = []
     obj_mask_list = []
 
-    obj_amodal_center_all = []
+    obj_3dcenter_2d_list = []
 
     # Trim videos and create a new dir
     for idx, frame_id in enumerate(range(vid_start_frame, min(vid_start_frame + max_vid_len, vid_len))):
@@ -220,6 +218,8 @@ for scene_name in reqd_scenes:
 
         temp_obj_bbox_dict = []
         temp_obj_mask_list = []
+        temp_obj_3dcenter_2d_list = []
+
         # Get bbox and mask
         for k, v in states_dict_2.items():
             # print('k',k)
@@ -252,6 +252,18 @@ for scene_name in reqd_scenes:
                 cropped_image = selected_mask[bbox_vals[1]:bbox_vals[1]+bbox_vals[3], bbox_vals[0]:bbox_vals[0]+bbox_vals[2]]
                 resized_cropped_img = cv2.resize(cropped_image.astype("float32"), (28, 28))
                 temp_obj_mask_list.append(resized_cropped_img)
+
+                json_file = os.path.join(step_output_folder, 'step_%06d.json' % frame_id)
+                f = open(json_file)
+                data_json = json.load(f)
+                f.close()
+                cam = cam_help.read_cam_params(data_json)
+                objs = cam_help.read_objs_new(data_json, idx+1, expected_tracks[k]['obj_name'])
+                _, temp_amodal_center = cam_help.obtain_amodal_center(objs, cam)
+                temp_obj_3dcenter_2d_list.append([k, temp_amodal_center[0][0],temp_amodal_center[0][1],temp_amodal_center[0][2]])
+                # print('objs',objs)
+                # print('expected_tracks[k]',expected_tracks[k]['obj_name'])
+
         
         # print('temp_obj_bbox_dict',temp_obj_bbox_dict)
         temp_obj_np = np.asarray(temp_obj_bbox_dict, dtype=np.float64)
@@ -259,18 +271,12 @@ for scene_name in reqd_scenes:
         obj_bbox_list.append(temp_obj_bbox_dict)
         obj_mask_list.append(temp_obj_mask_list)
 
-        # print('temp_obj_bbox_dict',temp_obj_bbox_dict)
-        # print('obj_bbox_list',obj_bbox_list)
+        # print('temp_obj_3dcenter_2d_list',temp_obj_3dcenter_2d_list)
+        temp_obj_3dcenter_2d_np=np.asarray(temp_obj_3dcenter_2d_list, dtype=np.float64)
+        obj_3dcenter_2d_list.append(temp_obj_3dcenter_2d_np)
 
-        json_file = os.path.join(step_output_folder, 'step_%06d.json' % frame_id)
-        f = open(json_file)
-        data = json.load(f)
-        f.close()
-        cam = cam_help.read_cam_params(data)
-        objs = cam_help.read_objs(data, idx+1)
-        _, amodal_center_all = cam_help.obtain_amodal_center(objs, cam)
-        assert(len(amodal_center_all) == len(temp_obj_bbox_dict))
-        obj_amodal_center_all.append(amodal_center_all)
+        assert(len(obj_3dcenter_2d_list) == len(obj_bbox_list))
+        # obj_amodal_center_all.append(amodal_center_all)
 
         # print('amodal_center_all',amodal_center_all)
 
@@ -285,7 +291,7 @@ for scene_name in reqd_scenes:
         mask_dst = OUTPUT_DIR + "/" + scene_folder_name_init + "_masks.pkl"
         pickle.dump(obj_mask_np, open(mask_dst, "wb"))
 
-        obj_3dcenter_np = np.asarray(amodal_center_all, dtype=np.float64)
+        obj_3dcenter_np = np.asarray(obj_3dcenter_2d_list, dtype=np.float64)
         center3d_2d_dst = OUTPUT_DIR + "/" + scene_folder_name_init + "_3dcenter_2d.pkl"
         pickle.dump(obj_3dcenter_np, open(center3d_2d_dst, "wb"))
 
