@@ -448,6 +448,8 @@ def get_object_list(
                 ]
             ]
         ), "expected focused object, got background"
+        # print('obj_name',obj_name)
+        # print('obj',obj)
         selected_mask = np.logical_and.reduce(
             (
                 mask_img[:, :, 0] == obj["segment_color"]["r"],
@@ -473,6 +475,7 @@ def get_object_list(
         )
         obj_unique_name = f"{obj_name}_{shape_str}_{textures_str}"
 
+        # print('obj_unique_name',obj_unique_name)
         if obj_unique_name not in tracking_results:
             role = "focused"
             assert not (
@@ -684,6 +687,7 @@ def get_tracklets(
         new_tracking_results = {}
         for obj_id, (obj_name, obj) in enumerate(tracking_results.items()):
             new_tracking_results[obj_id + 1] = copy.deepcopy(obj)
+            new_tracking_results[obj_id + 1]["obj_name"] = obj_name
 
         # add is_stationary key 
         bottom_points_objs_steps = {}
@@ -733,6 +737,8 @@ def get_tracklets(
             f"{store_path}/{scene_name}_tracking_results.pkl", "rb"
         ) as f:
             new_tracking_results = pickle.load(f)
+
+    # print('new_tracking_results',new_tracking_results)
     return new_tracking_results, vid_len
 
 
