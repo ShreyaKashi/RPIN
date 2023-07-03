@@ -80,7 +80,7 @@ class SS(Phys):
             gt_masks = gt_masks[img_idx:img_idx + self.seq_size].astype(np.float32)
             gt_masks = gt_masks[self.input_size:]
 
-        if C.RPIN.CENTER3D_2D_LOSS_WEIGHT > 0:
+        if C.RPIN.CENTER3D_2D_OFFSET_LOSS_WEIGHT > 0 or C.RPIN.CENTER3D_2D_DEPTH_LOSS_WEIGHT > 0:
             anno_name = anno_name.replace('masks.', '3dcenter_2d.')
             with open(anno_name, 'rb') as f:
                 center3d_2d = pickle.load(f)[img_idx:img_idx + self.seq_size, :, 1:]
