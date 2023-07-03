@@ -90,7 +90,8 @@ class Phys(Dataset):
         gt_center3d_2d=center3d_2d[self.input_size:].copy()
         gt_center3d_2d[..., 0] /= self.input_width
         gt_center3d_2d[..., 1] /= self.input_height
-        gt_center3d_2d[..., 2] = 1/gt_center3d_2d[..., 2]
+        if C.RPIN.CENTER3D_2D_INVERSE_DEPTH == True:
+            gt_center3d_2d[..., 2] = 1/gt_center3d_2d[..., 2]
         gt_center3d_2d = gt_center3d_2d.reshape(self.pred_size, -1, 3)
         # print('gt_center3d_2d',gt_center3d_2d)
 
@@ -99,7 +100,8 @@ class Phys(Dataset):
         gt_center3d_2d_offset[..., 1] -= gt_boxes_help[..., 1]
         gt_center3d_2d_offset[..., 0] /= self.input_width
         gt_center3d_2d_offset[..., 1] /= self.input_height
-        gt_center3d_2d_offset[..., 2] = 1/gt_center3d_2d_offset[..., 2]
+        if C.RPIN.CENTER3D_2D_INVERSE_DEPTH == True:
+            gt_center3d_2d_offset[..., 2] = 1/gt_center3d_2d_offset[..., 2]
         gt_center3d_2d_offset = gt_center3d_2d_offset.reshape(self.pred_size, -1, 3)
 
         labels = torch.zeros(1)  # a fake variable used to make interface consistent

@@ -240,7 +240,6 @@ class Trainer(object):
             valid = labels['valid'][:, None, :, None]
             center3d_2d_offset_loss = center3d_2d_offset_loss * valid
             center3d_2d_offset_loss = center3d_2d_offset_loss.sum(2) / valid.sum(2)
-            center3d_2d_offset_loss *= self.center3d_2d_offset_loss_weight
 
             for i in range(pred_size):
                 self.center3d_2d_o_step_losses[i] += center3d_2d_offset_loss[:, i, :].sum().item()
@@ -249,6 +248,7 @@ class Trainer(object):
             self.losses['3d2d_o2'] = float(np.mean(self.center3d_2d_o_step_losses[self.ptrain_size:])) \
                 if self.ptrain_size < self.ptest_size else 0
             
+            center3d_2d_offset_loss *= self.center3d_2d_offset_loss_weight
             center3d_2d_offset_loss = center3d_2d_offset_loss.mean(0)
             init_tau = C.RPIN.DISCOUNT_TAU ** (1 / self.ptrain_size)
             tau = init_tau + (self.iterations / self.max_iters) * (1 - init_tau)
@@ -261,7 +261,6 @@ class Trainer(object):
             valid = labels['valid'][:, None, :, None]
             center3d_2d_depth_loss = center3d_2d_depth_loss * valid
             center3d_2d_depth_loss = center3d_2d_depth_loss.sum(2) / valid.sum(2)
-            center3d_2d_depth_loss *= self.center3d_2d_depth_loss_weight
 
             for i in range(pred_size):
                 self.center3d_2d_d_step_losses[i] += center3d_2d_depth_loss[:, i, :].sum().item()
@@ -270,6 +269,7 @@ class Trainer(object):
             self.losses['3d2d_d2'] = float(np.mean(self.center3d_2d_d_step_losses[self.ptrain_size:])) \
                 if self.ptrain_size < self.ptest_size else 0
             
+            center3d_2d_depth_loss *= self.center3d_2d_depth_loss_weight
             center3d_2d_depth_loss = center3d_2d_depth_loss.mean(0)
             init_tau = C.RPIN.DISCOUNT_TAU ** (1 / self.ptrain_size)
             tau = init_tau + (self.iterations / self.max_iters) * (1 - init_tau)
