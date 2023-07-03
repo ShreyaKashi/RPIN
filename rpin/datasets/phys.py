@@ -41,18 +41,20 @@ class Phys(Dataset):
         #     data_t = data.copy()
             
 
-        boxes, gt_masks = self._parse_label(anno_name, vid_idx, img_idx)
+        boxes, gt_masks, center3d_2d = self._parse_label(anno_name, vid_idx, img_idx)
 
         # image flip augmentation
         if random.random() > 0.5 and self.split == 'train' and C.RPIN.HORIZONTAL_FLIP:
             boxes[..., [0, 2]] = self.input_width - boxes[..., [2, 0]]
             data = np.ascontiguousarray(data[..., ::-1])
             gt_masks = np.ascontiguousarray(gt_masks[..., ::-1])
+            center3d_2d[..., [0]] = self.input_width - boxes[..., [0]]
 
         if random.random() > 0.5 and self.split == 'train' and C.RPIN.VERTICAL_FLIP:
             boxes[..., [1, 3]] = self.input_height - boxes[..., [3, 1]]
             data = np.ascontiguousarray(data[..., ::-1, :])
             gt_masks = np.ascontiguousarray(gt_masks[..., ::-1])
+            center3d_2d[..., [1]] = self.input_height - boxes[..., [1]]
 
         # when the number of objects is fewer than the max number of objects
         num_objs = boxes.shape[1]
@@ -68,6 +70,7 @@ class Phys(Dataset):
         valid[num_objs:] = 0
         boxes = np.concatenate([boxes] + [boxes[:, :1] for _ in range(C.RPIN.MAX_NUM_OBJS - num_objs)], axis=1)
         gt_masks = np.concatenate([gt_masks] + [gt_masks[:, :1] for _ in range(C.RPIN.MAX_NUM_OBJS - num_objs)], axis=1)
+        center3d_2d = np.concatenate([center3d_2d] + [center3d_2d[:, :1] for _ in range(C.RPIN.MAX_NUM_OBJS - num_objs)], axis=1)
 
         # rois
         rois = boxes[:self.input_size].copy()
