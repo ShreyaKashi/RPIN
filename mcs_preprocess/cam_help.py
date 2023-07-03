@@ -303,15 +303,15 @@ def read_objs_new(data, frame, obj_name):
     obj_list = []
     for obj_id in data['object_list']:
         if obj_id in obj_name:
-            if data['object_list'][obj_id]['visible'] == True:
-                obj = Object()
-                obj.set_object_info(data['object_list'], frame, obj_id)
-                obj_list.append(obj)
+            # if data['object_list'][obj_id]['visible'] == True:
+            obj = Object()
+            obj.set_object_info(data['object_list'], frame, obj_id)
+            obj_list.append(obj)
 
     exclude_id = ['floor', 'wall_left', 'wall_right', 'wall_front', 'wall_back']
     for obj_id in data['structural_object_list']:
-        if obj_id in exclude_id:
-            continue
+        # if obj_id in exclude_id:
+        #     continue
         if obj_id in obj_name:
             obj = Object()
             obj.set_object_info(data['structural_object_list'], frame, obj_id)
