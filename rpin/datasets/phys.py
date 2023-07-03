@@ -90,7 +90,7 @@ class Phys(Dataset):
         gt_center3d_2d=center3d_2d[self.input_size:].copy()
         gt_center3d_2d[..., 0] /= self.input_width
         gt_center3d_2d[..., 1] /= self.input_height
-        gt_center3d_2d[..., 2] /= self.depth_normalize
+        gt_center3d_2d[..., 2] = 1/gt_center3d_2d[..., 2]
         gt_center3d_2d = gt_center3d_2d.reshape(self.pred_size, -1, 3)
         # print('gt_center3d_2d',gt_center3d_2d)
 
@@ -99,7 +99,7 @@ class Phys(Dataset):
         gt_center3d_2d_error[..., 1] -= gt_boxes_help[..., 1]
         gt_center3d_2d_error[..., 0] /= self.input_width
         gt_center3d_2d_error[..., 1] /= self.input_height
-        gt_center3d_2d_error[..., 2] /= self.depth_normalize
+        gt_center3d_2d_error[..., 2] = 1/gt_center3d_2d_error[..., 2]
         gt_center3d_2d_error = gt_center3d_2d_error.reshape(self.pred_size, -1, 3)
 
         labels = torch.zeros(1)  # a fake variable used to make interface consistent
