@@ -67,9 +67,13 @@ class Net(nn.Module):
                 nn.Sigmoid(),
             )
 
-        self.center3d_2d_error_decoder_output = 3
-        if C.RPIN.CENTER3D_2D_LOSS_WEIGHT > 0:
-            self.center3d_2d_error_decoder = nn.Linear(self.in_feat_dim * pool_size * pool_size, self.center3d_2d_error_decoder_output)
+        self.center3d_2d_offset_decoder_output = 2
+        if C.RPIN.CENTER3D_2D_OFFSET_LOSS_WEIGHT > 0:
+            self.center3d_2d_offset_decoder = nn.Linear(self.in_feat_dim * pool_size * pool_size, self.center3d_2d_offset_decoder_output)
+
+        self.center3d_2d_depth_decoder_output = 1
+        if C.RPIN.CENTER3D_2D_DEPTH_LOSS_WEIGHT > 0:
+            self.center3d_2d_depth_decoder = nn.Linear(self.in_feat_dim * pool_size * pool_size, self.center3d_2d_depth_decoder_output)
 
         if C.RPIN.SEQ_CLS_LOSS_WEIGHT > 0:
             self.seq_feature = nn.Sequential(
@@ -94,7 +98,8 @@ class Net(nn.Module):
 
         bbox_rollout = []
         mask_rollout = []
-        center3d_2d_error_rollout = []
+        center3d_2d_offset_rollout = []
+        center3d_2d_depth_rollout = []
         state_list = [x[:, i] for i in range(self.time_step)]
         state_list_buffer = [x[:, i] for i in range(self.time_step)]
         for i in range(num_rollouts):
@@ -106,10 +111,13 @@ class Net(nn.Module):
             if C.RPIN.MASK_LOSS_WEIGHT:
                 mask = self.mask_decoder(s.reshape(batch_size, self.num_objs, -1))
                 mask_rollout.append(mask)
-            if C.RPIN.CENTER3D_2D_LOSS_WEIGHT:
-                center3d_2d_error=self.center3d_2d_error_decoder(s.reshape(batch_size, self.num_objs, -1))
+            if C.RPIN.CENTER3D_2D_OFFSET_LOSS_WEIGHT:
+                center3d_2d_offset=self.center3d_2d_depth_decoder(s.reshape(batch_size, self.num_objs, -1))
+            if C.RPIN.CENTER3D_2D_DEPTH_LOSS_WEIGHT:
+                center3d_2d_depth=self.center3d_2d_depth_decoder(s.reshape(batch_size, self.num_objs, -1))
             bbox_rollout.append(bbox)
-            center3d_2d_error_rollout.append(center3d_2d_error)
+            center3d_2d_offset_rollout.append(center3d_2d_offset)
+            center3d_2d_depth_rollout.append(center3d_2d_depth)
             state_list = state_list[1:] + [s]
             state_list_buffer.append(s)
 
@@ -135,14 +143,19 @@ class Net(nn.Module):
             mask_rollout = torch.stack(mask_rollout).permute(1, 0, 2, 3)
             mask_rollout = mask_rollout.reshape(-1, num_rollouts, self.num_objs, self.mask_size, self.mask_size)
 
-        if len(center3d_2d_error_rollout) > 0:
-            center3d_2d_error_rollout = torch.stack(center3d_2d_error_rollout).permute(1, 0, 2, 3)
-            center3d_2d_error_rollout = center3d_2d_error_rollout.reshape(-1, num_rollouts, self.num_objs, self.center3d_2d_error_decoder_output)
-        
+        if len(center3d_2d_offset_rollout) > 0:
+            center3d_2d_offset_rollout = torch.stack(center3d_2d_offset_rollout).permute(1, 0, 2, 3)
+            center3d_2d_offset_rollout = center3d_2d_offset_rollout.reshape(-1, num_rollouts, self.num_objs, self.center3d_2d_offset_decoder_output)
+
+        if len(center3d_2d_depth_rollout) > 0:
+            center3d_2d_depth_rollout = torch.stack(center3d_2d_depth_rollout).permute(1, 0, 2, 3)
+            center3d_2d_depth_rollout = center3d_2d_depth_rollout.reshape(-1, num_rollouts, self.num_objs, self.center3d_2d_depth_decoder_output)  
+
         outputs = {
             'boxes': bbox_rollout,
             'masks': mask_rollout,
-            'center3d_2d_error': center3d_2d_error_rollout,
+            'center3d_2d_offset': center3d_2d_offset_rollout,
+            'center3d_2d_depth': center3d_2d_depth_rollout,
             'score': seq_score,
         }
         return outputs

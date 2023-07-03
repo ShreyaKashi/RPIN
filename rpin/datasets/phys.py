@@ -94,13 +94,13 @@ class Phys(Dataset):
         gt_center3d_2d = gt_center3d_2d.reshape(self.pred_size, -1, 3)
         # print('gt_center3d_2d',gt_center3d_2d)
 
-        gt_center3d_2d_error=center3d_2d[self.input_size:].copy()
-        gt_center3d_2d_error[..., 0] -= gt_boxes_help[..., 0]
-        gt_center3d_2d_error[..., 1] -= gt_boxes_help[..., 1]
-        gt_center3d_2d_error[..., 0] /= self.input_width
-        gt_center3d_2d_error[..., 1] /= self.input_height
-        gt_center3d_2d_error[..., 2] = 1/gt_center3d_2d_error[..., 2]
-        gt_center3d_2d_error = gt_center3d_2d_error.reshape(self.pred_size, -1, 3)
+        gt_center3d_2d_offset=center3d_2d[self.input_size:].copy()
+        gt_center3d_2d_offset[..., 0] -= gt_boxes_help[..., 0]
+        gt_center3d_2d_offset[..., 1] -= gt_boxes_help[..., 1]
+        gt_center3d_2d_offset[..., 0] /= self.input_width
+        gt_center3d_2d_offset[..., 1] /= self.input_height
+        gt_center3d_2d_offset[..., 2] = 1/gt_center3d_2d_offset[..., 2]
+        gt_center3d_2d_offset = gt_center3d_2d_offset.reshape(self.pred_size, -1, 3)
 
         labels = torch.zeros(1)  # a fake variable used to make interface consistent
         data = torch.from_numpy(data.astype(np.float32))
@@ -110,9 +110,9 @@ class Phys(Dataset):
         gt_masks = torch.from_numpy(gt_masks.astype(np.float32))
         valid = torch.from_numpy(valid.astype(np.float32))
         gt_center3d_2d = torch.from_numpy(gt_center3d_2d.astype(np.float32))
-        gt_center3d_2d_error = torch.from_numpy(gt_center3d_2d_error.astype(np.float32))
+        gt_center3d_2d_offset = torch.from_numpy(gt_center3d_2d_offset.astype(np.float32))
 
-        return data, data_t, rois, gt_boxes, gt_masks, gt_center3d_2d, gt_center3d_2d_error, valid, g_idx, labels
+        return data, data_t, rois, gt_boxes, gt_masks, gt_center3d_2d, gt_center3d_2d_offset, valid, g_idx, labels
 
     def _parse_image(self, video_name, vid_idx, img_idx):
         raise NotImplementedError
