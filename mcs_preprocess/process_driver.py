@@ -9,20 +9,29 @@ import shutil
 import pickle
 import cv2
 from pathlib import Path
-from dotenv import load_dotenv
+import cam_help as cam_help
+import copy
+# from dotenv import load_dotenv
 
-load_dotenv(dotenv_path=Path("/home/kashis/Desktop/Eval7/RPIN/.env"))
-
-
-MCS_ROOT_DIR = os.getenv("MCS_ROOT_DIR")
+# load_dotenv(dotenv_path=Path("/home/kashis/Desktop/Eval7/RPIN/.env"))
+MCS_ROOT_DIR = 'after_eval'
 STORE_PATH = os.getenv("STORE_PATH")
-OUTPUT_DIR = os.getenv("OUTPUT_DIR")
+# OUTPUT_DIR = os.getenv("OUTPUT_DIR")
+# OUTPUT_DIR = os.getenv("OUTPUT_DIR")
+OUTPUT_DIR = './after_eval_process_3d_center'
+
+# MCS_ROOT_DIR = os.getenv("MCS_ROOT_DIR")
+# STORE_PATH = os.getenv("STORE_PATH")
+# OUTPUT_DIR = os.getenv("OUTPUT_DIR")
 
 MAX_OBJS = 3
 SCALED_X = 384
 SCALED_Y = 256
 
 MIN_VID_LEN = 30
+
+MCS_IMG_HEIGHT = 600
+MCS_IMG_WIDTH = 400
 
 def get_obj_entrance_events(seq):
         objEntranceEventDict = {}
@@ -76,6 +85,8 @@ def get_step_processed_out(scene_name):
         save=False,
         provide_shape=True,
     )
+
+    # print('expected_tracks',expected_tracks)
 
     seq = utils.get_metadata_from_pipleine(expected_tracks, scene_metadata, vid_len_details)
     states_dict_2 = utils.preprocessing(vid_len_details, seq, scene_metadata)
@@ -159,6 +170,9 @@ def copy_process_images(frame_id, idx, folder_path, scene_folder_name_init, dept
 #     resized_img = cv2.resize(loaded_src_img, (SCALED_X, SCALED_Y))
 #     print("test")
 
+img_shape = (MCS_IMG_HEIGHT, MCS_IMG_WIDTH)
+rescaled_shape = (SCALED_X, SCALED_Y)
+scale = np.divide(rescaled_shape, img_shape)
 
 scene_folder_name_init = '0000'
 
@@ -169,12 +183,18 @@ max_vid_len = get_max_vid_len(reqd_scenes, False)
 
 scenes_generated = 0
 
+# print('reqd_scenes',reqd_scenes)
+
 for scene_name in reqd_scenes:
 
     scene_folder_path = os.path.join(MCS_ROOT_DIR, scene_name)
+
+    # print('scene_folder_path',scene_folder_path)
     rgb_folder = os.path.join(scene_folder_path, "RGB")
     seg_mask = os.path.join(scene_folder_path, "Mask")
     depth_folder = os.path.join(scene_folder_path, "Depth")
+
+    step_output_folder = os.path.join(scene_folder_path, "Step_Output")
     
     expected_tracks, scene_metadata, seq, states_dict_2 = get_step_processed_out(scene_name)
     vid_len = len(seq.mask_per_frame)
@@ -188,8 +208,12 @@ for scene_name in reqd_scenes:
     obj_bbox_list = []
     obj_mask_list = []
 
+    obj_amodal_center_all = []
+
     # Trim videos and create a new dir
     for idx, frame_id in enumerate(range(vid_start_frame, min(vid_start_frame + max_vid_len, vid_len))):
+
+        # print('idx',idx,'frame_id',frame_id)
         
         copy_process_images(frame_id, idx, rgb_folder, scene_folder_name_init)
         copy_process_images(frame_id, idx, depth_folder, scene_folder_name_init, depth_prefix="_depth")
@@ -198,6 +222,8 @@ for scene_name in reqd_scenes:
         temp_obj_mask_list = []
         # Get bbox and mask
         for k, v in states_dict_2.items():
+            # print('k',k)
+            # print('v',v)
             if v["obj_type"] == "focused":
                 bbox_vals = v["2dbbox"][frame_id]
                 
@@ -227,10 +253,27 @@ for scene_name in reqd_scenes:
                 resized_cropped_img = cv2.resize(cropped_image.astype("float32"), (28, 28))
                 temp_obj_mask_list.append(resized_cropped_img)
         
+        # print('temp_obj_bbox_dict',temp_obj_bbox_dict)
         temp_obj_np = np.asarray(temp_obj_bbox_dict, dtype=np.float64)
         temp_bbox_padded_boxes = utils.padding_bboxes(temp_obj_np, MAX_OBJS)
         obj_bbox_list.append(temp_obj_bbox_dict)
         obj_mask_list.append(temp_obj_mask_list)
+
+        # print('temp_obj_bbox_dict',temp_obj_bbox_dict)
+        # print('obj_bbox_list',obj_bbox_list)
+
+        json_file = os.path.join(step_output_folder, 'step_%06d.json' % frame_id)
+        f = open(json_file)
+        data = json.load(f)
+        f.close()
+        cam = cam_help.read_cam_params(data)
+        objs = cam_help.read_objs(data, idx+1)
+        _, amodal_center_all = cam_help.obtain_amodal_center(objs, cam)
+        assert(len(amodal_center_all) == len(temp_obj_bbox_dict))
+        obj_amodal_center_all.append(amodal_center_all)
+
+        # print('amodal_center_all',amodal_center_all)
+
     
     if len(obj_bbox_list)!= 0:
         print("Scene name: ", scene_name)
@@ -241,6 +284,10 @@ for scene_name in reqd_scenes:
         obj_mask_np = np.asarray(obj_mask_list, dtype=np.float64)
         mask_dst = OUTPUT_DIR + "/" + scene_folder_name_init + "_masks.pkl"
         pickle.dump(obj_mask_np, open(mask_dst, "wb"))
+
+        obj_3dcenter_np = np.asarray(amodal_center_all, dtype=np.float64)
+        center3d_2d_dst = OUTPUT_DIR + "/" + scene_folder_name_init + "_3dcenter_2d.pkl"
+        pickle.dump(obj_3dcenter_np, open(center3d_2d_dst, "wb"))
 
         scenes_generated += 1
     else:
