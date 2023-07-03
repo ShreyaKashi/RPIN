@@ -238,7 +238,7 @@ class Trainer(object):
         if C.RPIN.CENTER3D_2D_LOSS_WEIGHT > 0:
 
             center3d_2d_loss=(outputs['center3d_2d_error'] - labels['center3d_2d_error']) ** 2
-
+            valid = labels['valid'][:, None, :, None]
             center3d_2d_loss = center3d_2d_loss * valid
             center3d_2d_loss = center3d_2d_loss.sum(2) / valid.sum(2)
             center3d_2d_loss *= self.center3d_2d_loss_weight
@@ -247,11 +247,11 @@ class Trainer(object):
                 self.center3d_2d_p_step_losses[i] += center3d_2d_loss[:, i, :2].sum().item()
                 self.center3d_2d_d_step_losses[i] += center3d_2d_loss[:, i, 2:].sum().item()
 
-            self.losses['3d2d_p_1'] = float(np.mean(self.center3d_2d_p_step_losses[:self.ptrain_size]))
-            self.losses['3d2d_p_2'] = float(np.mean(self.center3d_2d_p_step_losses[self.ptrain_size:])) \
+            self.losses['3d2d_p1'] = float(np.mean(self.center3d_2d_p_step_losses[:self.ptrain_size]))
+            self.losses['3d2d_p2'] = float(np.mean(self.center3d_2d_p_step_losses[self.ptrain_size:])) \
                 if self.ptrain_size < self.ptest_size else 0
-            self.losses['3d2d_d_1'] = float(np.mean(self.center3d_2d_d_step_losses[:self.ptrain_size]))
-            self.losses['3d2d_d_2'] = float(np.mean(self.center3d_2d_d_step_losses[self.ptrain_size:])) \
+            self.losses['3d2d_d1'] = float(np.mean(self.center3d_2d_d_step_losses[:self.ptrain_size]))
+            self.losses['3d2d_d2'] = float(np.mean(self.center3d_2d_d_step_losses[self.ptrain_size:])) \
                 if self.ptrain_size < self.ptest_size else 0
             
             center3d_2d_loss = center3d_2d_loss.mean(0)
