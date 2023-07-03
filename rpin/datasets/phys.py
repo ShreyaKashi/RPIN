@@ -110,6 +110,7 @@ class Phys(Dataset):
         gt_masks = torch.from_numpy(gt_masks.astype(np.float32))
         valid = torch.from_numpy(valid.astype(np.float32))
         gt_center3d_2d = torch.from_numpy(gt_center3d_2d.astype(np.float32))
+        gt_center3d_2d_error = torch.from_numpy(gt_center3d_2d_error.astype(np.float32))
 
         return data, data_t, rois, gt_boxes, gt_masks, gt_center3d_2d, gt_center3d_2d_error, valid, g_idx, labels
 
