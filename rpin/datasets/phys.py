@@ -81,6 +81,12 @@ class Phys(Dataset):
         gt_boxes[..., 1::2] /= self.input_height
         gt_boxes = gt_boxes.reshape(self.pred_size, -1, 4)
 
+        # gt 3dcenter 2d
+        gt_center3d_2d=center3d_2d[self.input_size:].copy()
+        gt_center3d_2d[..., 0] /= self.input_width
+        gt_center3d_2d[..., 1] /= self.input_height
+        gt_center3d_2d = gt_center3d_2d.reshape(self.pred_size, -1, 3)
+
         labels = torch.zeros(1)  # a fake variable used to make interface consistent
         data = torch.from_numpy(data.astype(np.float32))
         data_t = torch.from_numpy(data_t.astype(np.float32))
@@ -88,6 +94,7 @@ class Phys(Dataset):
         gt_boxes = torch.from_numpy(gt_boxes.astype(np.float32))
         gt_masks = torch.from_numpy(gt_masks.astype(np.float32))
         valid = torch.from_numpy(valid.astype(np.float32))
+        gt_center3d_2d = torch.from_numpy(gt_center3d_2d.astype(np.float32))
 
         return data, data_t, rois, gt_boxes, gt_masks, valid, g_idx, labels
 

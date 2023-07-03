@@ -258,7 +258,7 @@ for scene_name in reqd_scenes:
                 data_json = json.load(f)
                 f.close()
                 cam = cam_help.read_cam_params(data_json)
-                objs = cam_help.read_objs_new(data_json, idx+1, expected_tracks[k]['obj_name'])
+                objs = cam_help.read_objs_new(data_json, frame_id, expected_tracks[k]['obj_name'])
                 _, temp_amodal_center = cam_help.obtain_amodal_center(objs, cam)
                 temp_obj_3dcenter_2d_list.append([k, temp_amodal_center[0][0],temp_amodal_center[0][1],temp_amodal_center[0][2]])
                 # print('objs',objs)
