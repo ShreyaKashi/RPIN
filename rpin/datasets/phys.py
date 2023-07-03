@@ -75,17 +75,21 @@ class Phys(Dataset):
         # rois
         rois = boxes[:self.input_size].copy()
         # gt boxes
+        # print('boxes',boxes)
         gt_boxes = boxes[self.input_size:].copy()
         gt_boxes = xyxy2xywh(gt_boxes.reshape(-1, 4)).reshape((-1, C.RPIN.MAX_NUM_OBJS, 4))
         gt_boxes[..., 0::2] /= self.input_width
         gt_boxes[..., 1::2] /= self.input_height
         gt_boxes = gt_boxes.reshape(self.pred_size, -1, 4)
+        # print('gt_boxes',gt_boxes)
 
         # gt 3dcenter 2d
+        # print('enter3d_2d',center3d_2d[self.input_size:])
         gt_center3d_2d=center3d_2d[self.input_size:].copy()
         gt_center3d_2d[..., 0] /= self.input_width
         gt_center3d_2d[..., 1] /= self.input_height
         gt_center3d_2d = gt_center3d_2d.reshape(self.pred_size, -1, 3)
+        # print('gt_center3d_2d',gt_center3d_2d)
 
         labels = torch.zeros(1)  # a fake variable used to make interface consistent
         data = torch.from_numpy(data.astype(np.float32))
@@ -96,7 +100,7 @@ class Phys(Dataset):
         valid = torch.from_numpy(valid.astype(np.float32))
         gt_center3d_2d = torch.from_numpy(gt_center3d_2d.astype(np.float32))
 
-        return data, data_t, rois, gt_boxes, gt_masks, valid, g_idx, labels
+        return data, data_t, rois, gt_boxes, gt_masks, gt_center3d_2d, valid, g_idx, labels
 
     def _parse_image(self, video_name, vid_idx, img_idx):
         raise NotImplementedError
