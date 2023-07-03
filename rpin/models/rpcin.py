@@ -112,7 +112,7 @@ class Net(nn.Module):
                 mask = self.mask_decoder(s.reshape(batch_size, self.num_objs, -1))
                 mask_rollout.append(mask)
             if C.RPIN.CENTER3D_2D_OFFSET_LOSS_WEIGHT:
-                center3d_2d_offset=self.center3d_2d_depth_decoder(s.reshape(batch_size, self.num_objs, -1))
+                center3d_2d_offset=self.center3d_2d_offset_decoder(s.reshape(batch_size, self.num_objs, -1))
             if C.RPIN.CENTER3D_2D_DEPTH_LOSS_WEIGHT:
                 center3d_2d_depth=self.center3d_2d_depth_decoder(s.reshape(batch_size, self.num_objs, -1))
             bbox_rollout.append(bbox)
