@@ -289,7 +289,7 @@ class Trainer(object):
             self.loss_name += ['m_1', 'm_2']
         if C.RPIN.CENTER3D_2D_LOSS_WEIGHT:
             self.center3d_2d_loss_weight = C.RPIN.CENTER3D_2D_LOSS_WEIGHT
-            self.loss_name += ['3d2d_p_1', '3d2d_p_2','3d2d_d_1', '3d2d_d_2']
+            self.loss_name += ['3d2d_p1', '3d2d_p2','3d2d_d1', '3d2d_d2']
         if C.RPIN.VAE:
             self.loss_name += ['kl']
         if C.RPIN.SEQ_CLS_LOSS_WEIGHT:
