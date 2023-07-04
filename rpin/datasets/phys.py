@@ -49,13 +49,13 @@ class Phys(Dataset):
             boxes[..., [0, 2]] = self.input_width - boxes[..., [2, 0]]
             data = np.ascontiguousarray(data[..., ::-1])
             gt_masks = np.ascontiguousarray(gt_masks[..., ::-1])
-            center3d_2d[..., [0]] = self.input_width - boxes[..., [0]]
+            center3d_2d[..., [0]] = self.input_width - center3d_2d[..., [0]]
 
         if random.random() > 0.5 and self.split == 'train' and C.RPIN.VERTICAL_FLIP:
             boxes[..., [1, 3]] = self.input_height - boxes[..., [3, 1]]
             data = np.ascontiguousarray(data[..., ::-1, :])
             gt_masks = np.ascontiguousarray(gt_masks[..., ::-1])
-            center3d_2d[..., [1]] = self.input_height - boxes[..., [1]]
+            center3d_2d[..., [1]] = self.input_height - center3d_2d[..., [1]]
 
         # when the number of objects is fewer than the max number of objects
         num_objs = boxes.shape[1]
