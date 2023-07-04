@@ -248,12 +248,12 @@ class Trainer(object):
             self.losses['3d2d_o2'] = float(np.mean(self.center3d_2d_o_step_losses[self.ptrain_size:])) \
                 if self.ptrain_size < self.ptest_size else 0
             
-            center3d_2d_offset_loss *= self.center3d_2d_offset_loss_weight
             center3d_2d_offset_loss = center3d_2d_offset_loss.mean(0)
             init_tau = C.RPIN.DISCOUNT_TAU ** (1 / self.ptrain_size)
             tau = init_tau + (self.iterations / self.max_iters) * (1 - init_tau)
             tau = torch.pow(tau, torch.arange(pred_size, out=torch.FloatTensor()))[:, None].to('cuda')
             center3d_2d_offset_loss = ((center3d_2d_offset_loss * tau) / tau.sum(axis=0, keepdims=True)).sum()
+            center3d_2d_offset_loss = center3d_2d_offset_loss * self.center3d_2d_offset_loss_weight
 
         center3d_2d_depth_loss = 0
         if C.RPIN.CENTER3D_2D_DEPTH_LOSS_WEIGHT > 0:
@@ -269,12 +269,12 @@ class Trainer(object):
             self.losses['3d2d_d2'] = float(np.mean(self.center3d_2d_d_step_losses[self.ptrain_size:])) \
                 if self.ptrain_size < self.ptest_size else 0
             
-            center3d_2d_depth_loss *= self.center3d_2d_depth_loss_weight
             center3d_2d_depth_loss = center3d_2d_depth_loss.mean(0)
             init_tau = C.RPIN.DISCOUNT_TAU ** (1 / self.ptrain_size)
             tau = init_tau + (self.iterations / self.max_iters) * (1 - init_tau)
             tau = torch.pow(tau, torch.arange(pred_size, out=torch.FloatTensor()))[:, None].to('cuda')
             center3d_2d_depth_loss = ((center3d_2d_depth_loss * tau) / tau.sum(axis=0, keepdims=True)).sum()
+            center3d_2d_depth_loss = center3d_2d_depth_loss * self.center3d_2d_depth_loss_weight
 
         # no need to do precise batch statistics, just do mean for backward gradient
         loss = loss.mean(0)
