@@ -38,13 +38,15 @@ class PredEvaluator(object):
             box_p_step_losses = [0.0 for _ in range(self.ptest_size)]
             masks_step_losses = [0.0 for _ in range(self.ptest_size)]
 
-        for batch_idx, (data, _, rois, gt_boxes, gt_masks, valid, g_idx, seq_l) in enumerate(self.val_loader):
+        for batch_idx, (data, _, rois, gt_boxes, gt_masks, gt_center3d_2d, gt_center3d_2d_offset, valid, g_idx, seq_l) in enumerate(self.val_loader):
             with torch.no_grad():
                 data = data.to(self.device)
                 rois = xyxy_to_rois(rois, batch=data.shape[0], time_step=data.shape[1], num_devices=self.num_gpus)
                 labels = {
                     'boxes': gt_boxes.to(self.device),
                     'masks': gt_masks.to(self.device),
+                    'center3d_2d': gt_center3d_2d.to(self.device),
+                    'center3d_2d_offset': gt_center3d_2d_offset.to(self.device),
                     'valid': valid.to(self.device),
                     'seq_l': seq_l.to(self.device),
                 }
@@ -208,6 +210,30 @@ class PredEvaluator(object):
             self.fg_num += fg_num
             self.bg_num += bg_num
 
+        if C.RPIN.CENTER3D_2D_OFFSET_LOSS_WEIGHT > 0:
+            center3d_2d_offset_loss=(outputs['center3d_2d_offset'] - labels['center3d_2d_offset'][...,:2]) ** 2
+            valid = labels['valid'][:, None, :, None]
+            center3d_2d_offset_loss = center3d_2d_offset_loss * valid
+            center3d_2d_offset_loss = center3d_2d_offset_loss.sum(2) / valid.sum(2)
+            for i in range(pred_size):
+                self.center3d_2d_o_step_losses[i] += center3d_2d_offset_loss[:, i, :].sum().item()
+
+            self.losses['3d2d_o1'] = float(np.mean(self.center3d_2d_o_step_losses[:self.ptrain_size]))
+            self.losses['3d2d_o2'] = float(np.mean(self.center3d_2d_o_step_losses[self.ptrain_size:])) \
+                if self.ptrain_size < self.ptest_size else 0
+
+        if C.RPIN.CENTER3D_2D_DEPTH_LOSS_WEIGHT > 0:
+            center3d_2d_depth_loss=(outputs['center3d_2d_depth'] - labels['center3d_2d_offset'][...,2:]) ** 2
+            valid = labels['valid'][:, None, :, None]
+            center3d_2d_depth_loss = center3d_2d_depth_loss * valid
+            center3d_2d_depth_loss = center3d_2d_depth_loss.sum(2) / valid.sum(2)
+            for i in range(pred_size):
+                self.center3d_2d_d_step_losses[i] += center3d_2d_depth_loss[:, i, :].sum().item()
+
+            self.losses['3d2d_d1'] = float(np.mean(self.center3d_2d_d_step_losses[:self.ptrain_size]))
+            self.losses['3d2d_d2'] = float(np.mean(self.center3d_2d_d_step_losses[self.ptrain_size:])) \
+                if self.ptrain_size < self.ptest_size else 0
+
         return
 
     def _setup_loss(self):
@@ -216,6 +242,12 @@ class PredEvaluator(object):
         self.loss_name += ['p_1', 'p_2', 's_1', 's_2']
         if C.RPIN.MASK_LOSS_WEIGHT:
             self.loss_name += ['m_1', 'm_2']
+        if C.RPIN.CENTER3D_2D_OFFSET_LOSS_WEIGHT:
+            self.center3d_2d_offset_loss_weight = C.RPIN.CENTER3D_2D_OFFSET_LOSS_WEIGHT
+            self.loss_name += ['3d2d_o1', '3d2d_o2']
+        if C.RPIN.CENTER3D_2D_DEPTH_LOSS_WEIGHT:
+            self.center3d_2d_depth_loss_weight = C.RPIN.CENTER3D_2D_DEPTH_LOSS_WEIGHT
+            self.loss_name += ['3d2d_d1', '3d2d_d2']
         if C.RPIN.SEQ_CLS_LOSS_WEIGHT:
             self.loss_name += ['seq']
         self._init_loss()
@@ -225,6 +257,8 @@ class PredEvaluator(object):
         self.box_p_step_losses = [0.0 for _ in range(self.ptest_size)]
         self.box_s_step_losses = [0.0 for _ in range(self.ptest_size)]
         self.masks_step_losses = [0.0 for _ in range(self.ptest_size)]
+        self.center3d_2d_o_step_losses = [0.0 for _ in range(self.ptest_size)]
+        self.center3d_2d_d_step_losses = [0.0 for _ in range(self.ptest_size)]
         # an statistics of each validation
         self.fg_correct, self.bg_correct, self.fg_num, self.bg_num = 0, 0, 0, 0
         self.loss_cnt = 0
