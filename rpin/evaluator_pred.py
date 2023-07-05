@@ -158,6 +158,9 @@ class PredEvaluator(object):
                             pred_boxes_i[..., [1, 3]] *= scale_h
                             gt_boxes_i[..., [0, 2]] *= scale_w
                             gt_boxes_i[..., [1, 3]] *= scale_h
+                            if C.RPIN.CENTER3D_2D_OFFSET_LOSS_WEIGHT:
+                                pred_center3d_2d_offset_i[..., [0]] *= scale_w
+                                pred_center3d_2d_offset_i[..., [1]] *= scale_h
 
                         pred_masks_i = None
                         if C.RPIN.MASK_LOSS_WEIGHT:
