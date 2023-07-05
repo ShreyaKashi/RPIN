@@ -81,6 +81,8 @@ class PredEvaluator(object):
                 outputs = {
                     'boxes': outputs['boxes'].cpu().numpy(),
                     'masks': outputs['masks'].cpu().numpy() if C.RPIN.MASK_LOSS_WEIGHT else None,
+                    'center3d_2d_offset': outputs['center3d_2d_offset'].cpu().numpy() if C.RPIN.CENTER3D_2D_OFFSET_LOSS_WEIGHT else None,
+                    'center3d_2d_depth': outputs['center3d_2d_depth'].cpu().numpy() if C.RPIN.CENTER3D_2D_DEPTH_LOSS_WEIGHT else None,
                 }
                 outputs['boxes'][..., 0::2] *= self.input_width
                 outputs['boxes'][..., 1::2] *= self.input_height
@@ -88,15 +90,27 @@ class PredEvaluator(object):
                     outputs['boxes'].reshape(-1, 4)
                 ).reshape((data.shape[0], -1, C.RPIN.MAX_NUM_OBJS, 4))
 
+                outputs['center3d_2d_offset'][..., 0] *= self.input_width
+                outputs['center3d_2d_offset'][..., 1] *= self.input_height
+                if C.RPIN.CENTER3D_2D_INVERSE_DEPTH == True:
+                    outputs['center3d_2d_offset'][..., 2] = 1/outputs['center3d_2d_offset'][..., 2]
+
                 labels = {
                     'boxes': labels['boxes'].cpu().numpy(),
                     'masks': labels['masks'].cpu().numpy(),
+                    'center3d_2d': labels['center3d_2d'].cpu().numpy(),
+                    'center3d_2d_offset': labels['center3d_2d_offset'].cpu().numpy(),
                 }
                 labels['boxes'][..., 0::2] *= self.input_width
                 labels['boxes'][..., 1::2] *= self.input_height
                 labels['boxes'] = xywh2xyxy(
                     labels['boxes'].reshape(-1, 4)
                 ).reshape((data.shape[0], -1, C.RPIN.MAX_NUM_OBJS, 4))
+
+                labels['center3d_2d_offset'][..., 0] *= self.input_width
+                labels['center3d_2d_offset'][..., 1] *= self.input_height
+                if C.RPIN.CENTER3D_2D_INVERSE_DEPTH == True:
+                    labels['center3d_2d_offset'][..., 2] = 1/labels['center3d_2d_offset'][..., 2]
 
                 for i in range(rois.shape[0]):
                     batch_size = C.SOLVER.BATCH_SIZE if not C.RPIN.VAE else 1
@@ -128,6 +142,15 @@ class PredEvaluator(object):
                             gt_boxes_i = labels['boxes'][i][:, v]
                             im_data = get_im_data(im_name, gt_boxes_i[None, 0:1], C.DATA_ROOT, self.high_resolution_plot)
 
+                        gt_center3d_2d_offset_depth_i = labels['center3d_2d_offset'][i][:, v]
+                        pred_center3d_2d_offset_i = None
+                        if C.RPIN.CENTER3D_2D_OFFSET_LOSS_WEIGHT:
+                            pred_center3d_2d_offset_i = outputs['center3d_2d_offset'][i][:, v]
+
+                        pred_center3d_2d_depth_i = None
+                        if C.RPIN.CENTER3D_2D_DEPTH_LOSS_WEIGHT:
+                            pred_center3d_2d_depth_i = outputs['center3d_2d_depth'][i][:, v]
+
                         if self.high_resolution_plot:
                             scale_w = im_data.shape[1] / self.input_width
                             scale_h = im_data.shape[0] / self.input_height
@@ -142,6 +165,7 @@ class PredEvaluator(object):
 
                         plot_rollouts(im_data, pred_boxes_i, gt_boxes_i,
                                       pred_masks_i, labels['masks'][i][:, v],
+                                      pred_center3d_2d_offset_i, pred_center3d_2d_depth_i, gt_center3d_2d_offset_depth_i,
                                       output_dir=self.output_dir, output_name=output_name, bg_image=bg_image)
 
         if C.RPIN.VAE:

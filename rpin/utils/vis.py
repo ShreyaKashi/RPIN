@@ -30,7 +30,8 @@ WAD_COLORS = np.array(
     dtype=np.uint8)
 
 
-def plot_rollouts(im_data, pred_boxes, gt_boxes, pred_masks=None, gt_masks=None,
+def plot_rollouts(im_data, pred_boxes, gt_boxes, pred_masks=None, gt_masks=None, 
+                  pred_center3d_2d_offset=None, pred_center3d_2d_depth=None, gt_center3d_2d_offset_depth=None,
                   output_dir='', output_name='', bg_image=None):
     # plot rollouts for different dataset
     # 1. plot images
