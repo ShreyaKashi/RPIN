@@ -65,6 +65,24 @@ class Trainer(object):
             loss = self.loss(outputs, labels, 'train')
             loss.backward()
             self.optim.step()
+
+            # print('labels[center3d_2d_offset]')
+            # print(labels['center3d_2d_offset'])
+
+            # print('labels[center3d_2d_offset][...,:2]')
+            # print(labels['center3d_2d_offset'][...,:2])
+
+            # print('labels[center3d_2d_offset][...,2:]')
+            # print(labels['center3d_2d_offset'][...,2:])
+
+            # print('outputs[center3d_2d_offset]')
+            # print(outputs['center3d_2d_offset'])
+
+            # print('outputs[center3d_2d_depth]')
+            # print(outputs['center3d_2d_depth'])
+
+            # print('')
+
             # this is an approximation for printing; the dataset size may not divide the batch size
             self.iterations += self.batch_size
 
@@ -276,6 +294,29 @@ class Trainer(object):
             center3d_2d_depth_loss = ((center3d_2d_depth_loss * tau) / tau.sum(axis=0, keepdims=True)).sum()
             center3d_2d_depth_loss = center3d_2d_depth_loss * self.center3d_2d_depth_loss_weight
 
+
+        center3d_2d_true_depth_loss = 0
+        if C.RPIN.CENTER3D_2D_INVERSE_DEPTH == True:
+            center3d_2d_true_depth_loss=(1/outputs['center3d_2d_depth'] - 1/labels['center3d_2d_offset'][...,2:]) ** 2
+            valid = labels['valid'][:, None, :, None]
+            center3d_2d_true_depth_loss = center3d_2d_true_depth_loss * valid
+            center3d_2d_true_depth_loss = center3d_2d_true_depth_loss.sum(2) / valid.sum(2)
+
+            for i in range(pred_size):
+                self.center3d_2d_true_d_step_losses[i] += center3d_2d_true_depth_loss[:, i, :].sum().item()
+
+            self.losses['true_d1'] = float(np.mean(self.center3d_2d_true_d_step_losses[:self.ptrain_size]))
+            self.losses['true_d2'] = float(np.mean(self.center3d_2d_true_d_step_losses[self.ptrain_size:])) \
+                if self.ptrain_size < self.ptest_size else 0
+            
+            # center3d_2d_depth_loss = center3d_2d_depth_loss.mean(0)
+            # init_tau = C.RPIN.DISCOUNT_TAU ** (1 / self.ptrain_size)
+            # tau = init_tau + (self.iterations / self.max_iters) * (1 - init_tau)
+            # tau = torch.pow(tau, torch.arange(pred_size, out=torch.FloatTensor()))[:, None].to('cuda')
+            # center3d_2d_depth_loss = ((center3d_2d_depth_loss * tau) / tau.sum(axis=0, keepdims=True)).sum()
+            # center3d_2d_depth_loss = center3d_2d_depth_loss * self.center3d_2d_depth_loss_weight
+
+
         # no need to do precise batch statistics, just do mean for backward gradient
         loss = loss.mean(0)
         init_tau = C.RPIN.DISCOUNT_TAU ** (1 / self.ptrain_size)
@@ -308,6 +349,8 @@ class Trainer(object):
         if C.RPIN.CENTER3D_2D_DEPTH_LOSS_WEIGHT:
             self.center3d_2d_depth_loss_weight = C.RPIN.CENTER3D_2D_DEPTH_LOSS_WEIGHT
             self.loss_name += ['3d2d_d1', '3d2d_d2']
+        if C.RPIN.CENTER3D_2D_INVERSE_DEPTH == True: 
+            self.loss_name += ['true_d1', 'true_d2']
         if C.RPIN.VAE:
             self.loss_name += ['kl']
         if C.RPIN.SEQ_CLS_LOSS_WEIGHT:
@@ -321,6 +364,7 @@ class Trainer(object):
         self.masks_step_losses = [0.0 for _ in range(self.ptest_size)]
         self.center3d_2d_o_step_losses = [0.0 for _ in range(self.ptest_size)]
         self.center3d_2d_d_step_losses = [0.0 for _ in range(self.ptest_size)]
+        self.center3d_2d_true_d_step_losses = [0.0 for _ in range(self.ptest_size)]
         # an statistics of each validation
         self.fg_correct, self.bg_correct, self.fg_num, self.bg_num = 0, 0, 0, 0
         self.loss_cnt = 0
