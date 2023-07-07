@@ -73,7 +73,12 @@ class Net(nn.Module):
 
         self.center3d_2d_depth_decoder_output = 1
         if C.RPIN.CENTER3D_2D_DEPTH_LOSS_WEIGHT > 0:
-            self.center3d_2d_depth_decoder = nn.Linear(self.in_feat_dim * pool_size * pool_size, self.center3d_2d_depth_decoder_output)
+            self.center3d_2d_depth_decoder = nn.Sequential(
+                nn.Linear(self.in_feat_dim * pool_size * pool_size, self.in_feat_dim),
+                nn.ReLU(inplace=True),
+                nn.Linear(self.in_feat_dim, self.center3d_2d_depth_decoder_output),
+            )
+            # self.center3d_2d_depth_decoder = nn.Linear(self.in_feat_dim * pool_size * pool_size, self.center3d_2d_depth_decoder_output)
 
         if C.RPIN.SEQ_CLS_LOSS_WEIGHT > 0:
             self.seq_feature = nn.Sequential(
