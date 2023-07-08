@@ -9,7 +9,7 @@ from rpin.utils.im import get_im_data
 from rpin.utils.vis import plot_rollouts
 from rpin.utils.misc import tprint, pprint
 from rpin.utils.bbox import xyxy_to_rois, xywh2xyxy
-
+import copy
 
 class PredEvaluator(object):
     def __init__(self, device, val_loader, model, num_gpus, num_plot_image, output_dir):
@@ -86,6 +86,9 @@ class PredEvaluator(object):
                 }
                 outputs['boxes'][..., 0::2] *= self.input_width
                 outputs['boxes'][..., 1::2] *= self.input_height
+
+                output_box_2dcenter=outputs['boxes'][..., 0:2].copy()
+
                 outputs['boxes'] = xywh2xyxy(
                     outputs['boxes'].reshape(-1, 4)
                 ).reshape((data.shape[0], -1, C.RPIN.MAX_NUM_OBJS, 4))
@@ -99,7 +102,7 @@ class PredEvaluator(object):
                     'boxes': labels['boxes'].cpu().numpy(),
                     'masks': labels['masks'].cpu().numpy(),
                     'center3d_2d': labels['center3d_2d'].cpu().numpy(),
-                    'center3d_2d_offset': labels['center3d_2d_offset'].cpu().numpy(),
+                    # 'center3d_2d_offset': labels['center3d_2d_offset'].cpu().numpy(),
                 }
                 labels['boxes'][..., 0::2] *= self.input_width
                 labels['boxes'][..., 1::2] *= self.input_height
@@ -107,10 +110,10 @@ class PredEvaluator(object):
                     labels['boxes'].reshape(-1, 4)
                 ).reshape((data.shape[0], -1, C.RPIN.MAX_NUM_OBJS, 4))
 
-                labels['center3d_2d_offset'][..., 0] *= self.input_width
-                labels['center3d_2d_offset'][..., 1] *= self.input_height
+                labels['center3d_2d'][..., 0] *= self.input_width
+                labels['center3d_2d'][..., 1] *= self.input_height
                 if C.RPIN.CENTER3D_2D_INVERSE_DEPTH == True:
-                    labels['center3d_2d_offset'][..., 2] = 1/labels['center3d_2d_offset'][..., 2]
+                    labels['center3d_2d'][..., 2] = 1/labels['center3d_2d'][..., 2]
 
                 for i in range(rois.shape[0]):
                     batch_size = C.SOLVER.BATCH_SIZE if not C.RPIN.VAE else 1
@@ -142,10 +145,12 @@ class PredEvaluator(object):
                             gt_boxes_i = labels['boxes'][i][:, v]
                             im_data = get_im_data(im_name, gt_boxes_i[None, 0:1], C.DATA_ROOT, self.high_resolution_plot)
 
-                        gt_center3d_2d_offset_depth_i = labels['center3d_2d_offset'][i][:, v]
-                        pred_center3d_2d_offset_i = None
+                        gt_center3d_2d_center_depth_i = labels['center3d_2d'][i][:, v]
+                        # pred_center3d_2d_offset_i = None
+                        pred_center3d_2d_center_i = None
                         if C.RPIN.CENTER3D_2D_OFFSET_LOSS_WEIGHT:
-                            pred_center3d_2d_offset_i = outputs['center3d_2d_offset'][i][:, v]
+                            # pred_center3d_2d_offset_i = outputs['center3d_2d_offset'][i][:, v]
+                            pred_center3d_2d_center_i = outputs['center3d_2d_offset'][i][:, v] + output_box_2dcenter[i][:, v]
 
                         pred_center3d_2d_depth_i = None
                         if C.RPIN.CENTER3D_2D_DEPTH_LOSS_WEIGHT:
@@ -159,8 +164,11 @@ class PredEvaluator(object):
                             gt_boxes_i[..., [0, 2]] *= scale_w
                             gt_boxes_i[..., [1, 3]] *= scale_h
                             if C.RPIN.CENTER3D_2D_OFFSET_LOSS_WEIGHT:
-                                pred_center3d_2d_offset_i[..., [0]] *= scale_w
-                                pred_center3d_2d_offset_i[..., [1]] *= scale_h
+                                pred_center3d_2d_center_i[..., [0]] *= scale_w
+                                pred_center3d_2d_center_i[..., [1]] *= scale_h
+                                gt_center3d_2d_center_depth_i[..., [0]] *= scale_w
+                                gt_center3d_2d_center_depth_i[..., [1]] *= scale_h
+
 
                         pred_masks_i = None
                         if C.RPIN.MASK_LOSS_WEIGHT:
@@ -168,7 +176,7 @@ class PredEvaluator(object):
 
                         plot_rollouts(im_data, pred_boxes_i, gt_boxes_i,
                                       pred_masks_i, labels['masks'][i][:, v],
-                                      pred_center3d_2d_offset_i, pred_center3d_2d_depth_i, gt_center3d_2d_offset_depth_i,
+                                      pred_center3d_2d_center_i, pred_center3d_2d_depth_i, gt_center3d_2d_center_depth_i,
                                       output_dir=self.output_dir, output_name=output_name, bg_image=bg_image)
 
         if C.RPIN.VAE:
