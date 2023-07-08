@@ -260,6 +260,19 @@ class PredEvaluator(object):
             self.losses['3d2d_d1'] = float(np.mean(self.center3d_2d_d_step_losses[:self.ptrain_size]))
             self.losses['3d2d_d2'] = float(np.mean(self.center3d_2d_d_step_losses[self.ptrain_size:])) \
                 if self.ptrain_size < self.ptest_size else 0
+            
+        if C.RPIN.CENTER3D_2D_INVERSE_DEPTH == True:
+            center3d_2d_true_depth_loss=(1/outputs['center3d_2d_depth'] - 1/labels['center3d_2d_offset'][...,2:]) ** 2
+            valid = labels['valid'][:, None, :, None]
+            center3d_2d_true_depth_loss = center3d_2d_true_depth_loss * valid
+            center3d_2d_true_depth_loss = center3d_2d_true_depth_loss.sum(2) / valid.sum(2)
+
+            for i in range(pred_size):
+                self.center3d_2d_true_d_step_losses[i] += center3d_2d_true_depth_loss[:, i, :].sum().item()
+
+            self.losses['true_d1'] = float(np.mean(self.center3d_2d_true_d_step_losses[:self.ptrain_size]))
+            self.losses['true_d2'] = float(np.mean(self.center3d_2d_true_d_step_losses[self.ptrain_size:])) \
+                if self.ptrain_size < self.ptest_size else 0
 
         return
 
@@ -275,6 +288,8 @@ class PredEvaluator(object):
         if C.RPIN.CENTER3D_2D_DEPTH_LOSS_WEIGHT:
             self.center3d_2d_depth_loss_weight = C.RPIN.CENTER3D_2D_DEPTH_LOSS_WEIGHT
             self.loss_name += ['3d2d_d1', '3d2d_d2']
+        if C.RPIN.CENTER3D_2D_INVERSE_DEPTH == True: 
+            self.loss_name += ['true_d1', 'true_d2']
         if C.RPIN.SEQ_CLS_LOSS_WEIGHT:
             self.loss_name += ['seq']
         self._init_loss()
@@ -286,6 +301,7 @@ class PredEvaluator(object):
         self.masks_step_losses = [0.0 for _ in range(self.ptest_size)]
         self.center3d_2d_o_step_losses = [0.0 for _ in range(self.ptest_size)]
         self.center3d_2d_d_step_losses = [0.0 for _ in range(self.ptest_size)]
+        self.center3d_2d_true_d_step_losses = [0.0 for _ in range(self.ptest_size)]
         # an statistics of each validation
         self.fg_correct, self.bg_correct, self.fg_num, self.bg_num = 0, 0, 0, 0
         self.loss_cnt = 0
