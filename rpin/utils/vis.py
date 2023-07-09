@@ -215,7 +215,7 @@ def plot_rollouts(im_data, pred_boxes, gt_boxes, pred_masks=None, gt_masks=None,
         pred_center_3d_2d_bev_im = np.zeros((depth_all, im_data.shape[1], im_data.shape[2]),np.uint8)
         pred_center_3d_2d_bev_im[:,:,:]=255
 
-        fig= plt.figure(figsize=(12, 12))
+        fig= plt.figure(figsize=(10, 12))
         ax=fig.subplots(3,2)
 
         ax[0,0].imshow(pred_center_3d_2d_bev_im.astype(np.uint8))
@@ -243,14 +243,17 @@ def plot_rollouts(im_data, pred_boxes, gt_boxes, pred_masks=None, gt_masks=None,
                 
             # color_center_3d_2d = mask_colors[o_id][c_id]
         
-            ax[0,0].scatter(pred_center3d_2d_depth[t_id, o_id][0], pred_center3d_2d[t_id, o_id][1], size_center_3d_2d,color=color[o_id])
-            ax[0,1].scatter(gt_center3d_2d_center_depth[t_id, o_id][2], gt_center3d_2d_center_depth[t_id, o_id][1], size_center_3d_2d,color=color[o_id])
-            ax[0,0].invert_yaxis()
-            ax[0,1].invert_yaxis()
+            ax[0,0].scatter(pred_center3d_2d[t_id, o_id][0], pred_center3d_2d_depth[t_id, o_id][0], size_center_3d_2d,color=color[o_id])
+            # ax[0,0].invert_yaxis()
+            ax[0,1].scatter(gt_center3d_2d_center_depth[t_id, o_id][0], gt_center3d_2d_center_depth[t_id, o_id][2], size_center_3d_2d,color=color[o_id])
+            # ax[0,1].invert_yaxis()
 
             ax[1,0].scatter(pred_center3d_2d[t_id, o_id][0], pred_center3d_2d[t_id, o_id][1], size_center_3d_2d,color=color[o_id])
+            ax[1,0].text(pred_center3d_2d[t_id, o_id][0], pred_center3d_2d[t_id, o_id][1], pred_center3d_2d_depth[t_id, o_id][0], rotation=45)
             ax[1,1].scatter(gt_center3d_2d_center_depth[t_id, o_id][0], gt_center3d_2d_center_depth[t_id, o_id][1], size_center_3d_2d,color=color[o_id])
-
+            ax[1,1].text(gt_center3d_2d_center_depth[t_id, o_id][0], gt_center3d_2d_center_depth[t_id, o_id][1], gt_center3d_2d_center_depth[t_id, o_id][2], rotation=45)
+        ax[0,0].invert_yaxis()
+        ax[0,1].invert_yaxis()
         pred_mask_im = np.minimum(np.maximum(pred_mask_im, 0.0), 255.0)
         ax[2,0].imshow(pred_mask_im.astype(np.uint8))
 
