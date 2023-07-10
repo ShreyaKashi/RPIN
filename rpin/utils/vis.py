@@ -249,9 +249,9 @@ def plot_rollouts(im_data, pred_boxes, gt_boxes, pred_masks=None, gt_masks=None,
             # ax[0,1].invert_yaxis()
 
             ax[1,0].scatter(pred_center3d_2d[t_id, o_id][0], pred_center3d_2d[t_id, o_id][1], size_center_3d_2d,color=color[o_id])
-            ax[1,0].text(pred_center3d_2d[t_id, o_id][0], pred_center3d_2d[t_id, o_id][1], pred_center3d_2d_depth[t_id, o_id][0], rotation=45)
+            ax[1,0].text(pred_center3d_2d[t_id, o_id][0], pred_center3d_2d[t_id, o_id][1], pred_center3d_2d_depth[t_id, o_id][0], rotation=30)
             ax[1,1].scatter(gt_center3d_2d_center_depth[t_id, o_id][0], gt_center3d_2d_center_depth[t_id, o_id][1], size_center_3d_2d,color=color[o_id])
-            ax[1,1].text(gt_center3d_2d_center_depth[t_id, o_id][0], gt_center3d_2d_center_depth[t_id, o_id][1], gt_center3d_2d_center_depth[t_id, o_id][2], rotation=45)
+            ax[1,1].text(gt_center3d_2d_center_depth[t_id, o_id][0], gt_center3d_2d_center_depth[t_id, o_id][1], gt_center3d_2d_center_depth[t_id, o_id][2], rotation=30)
         ax[0,0].invert_yaxis()
         ax[0,1].invert_yaxis()
         pred_mask_im = np.minimum(np.maximum(pred_mask_im, 0.0), 255.0)
