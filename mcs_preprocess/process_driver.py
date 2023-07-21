@@ -14,7 +14,7 @@ import copy
 # from dotenv import load_dotenv
 
 # load_dotenv(dotenv_path=Path("/home/kashis/Desktop/Eval7/RPIN/.env"))
-MCS_ROOT_DIR = 'after_eval'
+MCS_ROOT_DIR = './after_eval'
 STORE_PATH = os.getenv("STORE_PATH")
 # OUTPUT_DIR = os.getenv("OUTPUT_DIR")
 # OUTPUT_DIR = os.getenv("OUTPUT_DIR")
@@ -149,11 +149,34 @@ def copy_process_images(frame_id, idx, folder_path, scene_folder_name_init, dept
                    cv2.imread(src),
                    cv2.COLOR_BGR2RGB,
                )
+    # print('loaded_src_img',loaded_src_img.shape)
     resized_img = cv2.resize(loaded_src_img, (SCALED_X, SCALED_Y))
 
     if not os.path.exists(str(OUTPUT_DIR) + "/" + scene_folder_name_init + depth_prefix):
        os.makedirs(str(OUTPUT_DIR) + "/" + scene_folder_name_init + depth_prefix)
     cv2.imwrite(os.path.join(dst, target_file_name), resized_img)
+
+    return loaded_src_img.copy()
+
+
+def occulder_process_images(input, selected_mask):
+    # get rgb and depth of image
+    input_new = input * selected_mask[...,np.newaxis]
+    
+    return input_new
+
+
+def occulder_save_images(input, idx, scene_folder_name_init, depth_prefix=""):
+    # save rgb and depth of image
+    dst = OUTPUT_DIR + "/" + scene_folder_name_init + depth_prefix
+    target_file_name = str(idx).zfill(3) + ".png"
+
+    resized_img = cv2.resize(input, (SCALED_X, SCALED_Y))
+
+    if not os.path.exists(str(OUTPUT_DIR) + "/" + scene_folder_name_init + depth_prefix):
+       os.makedirs(str(OUTPUT_DIR) + "/" + scene_folder_name_init + depth_prefix)
+    cv2.imwrite(os.path.join(dst, target_file_name), resized_img)
+
 
 
 # def viz(bbox_new_val, frame_id, idx, rgb_folder, scene_folder_name_init):
@@ -187,7 +210,7 @@ for scene_name in reqd_scenes:
 
     scene_folder_path = os.path.join(MCS_ROOT_DIR, scene_name)
 
-    # print('scene_folder_path',scene_folder_path)
+    print('scene_folder_path',scene_folder_path)
     rgb_folder = os.path.join(scene_folder_path, "RGB")
     seg_mask = os.path.join(scene_folder_path, "Mask")
     depth_folder = os.path.join(scene_folder_path, "Depth")
@@ -213,12 +236,17 @@ for scene_name in reqd_scenes:
 
         # print('idx',idx,'frame_id',frame_id)
         
-        copy_process_images(frame_id, idx, rgb_folder, scene_folder_name_init)
-        copy_process_images(frame_id, idx, depth_folder, scene_folder_name_init, depth_prefix="_depth")
+        rgb_help=copy_process_images(frame_id, idx, rgb_folder, scene_folder_name_init)
+        depth_help=copy_process_images(frame_id, idx, depth_folder, scene_folder_name_init, depth_prefix="_depth")
 
         temp_obj_bbox_dict = []
         temp_obj_mask_list = []
         temp_obj_3dcenter_2d_list = []
+
+        occ_rgb_help = 0
+        occ_rgb_help_mark = 0
+        occ_depth_help = 0
+        occ_depth_help_mark = 0
 
         # Get bbox and mask
         for k, v in states_dict_2.items():
@@ -249,6 +277,14 @@ for scene_name in reqd_scenes:
                 )
                 if np.sum(selected_mask) == 0:
                     continue
+
+                # print('selected_maskshape',selected_mask.shape)
+                # print('selected_mask',selected_mask)
+                occ_rgb_help = occ_rgb_help + occulder_process_images(rgb_help, selected_mask)
+                occ_rgb_help_mark = 1
+                occ_depth_help =  occ_depth_help + occulder_process_images(depth_help, selected_mask)
+                occ_depth_help_mark = 1
+
                 cropped_image = selected_mask[bbox_vals[1]:bbox_vals[1]+bbox_vals[3], bbox_vals[0]:bbox_vals[0]+bbox_vals[2]]
                 resized_cropped_img = cv2.resize(cropped_image.astype("float32"), (28, 28))
                 temp_obj_mask_list.append(resized_cropped_img)
@@ -261,10 +297,14 @@ for scene_name in reqd_scenes:
                 objs = cam_help.read_objs_new(data_json, frame_id, expected_tracks[k]['obj_name'])
                 _, temp_amodal_center = cam_help.obtain_amodal_center(objs, cam)
                 temp_obj_3dcenter_2d_list.append([k, temp_amodal_center[0][0],temp_amodal_center[0][1],temp_amodal_center[0][2]])
-                # print('objs',objs)
-                # print('expected_tracks[k]',expected_tracks[k]['obj_name'])
 
-        
+        if occ_rgb_help_mark !=0:
+            occulder_save_images(occ_rgb_help, idx, scene_folder_name_init, depth_prefix="_occulder")
+        if occ_depth_help_mark !=0:
+            occ_depth_help_new = np.where(occ_depth_help==0,255,occ_depth_help).astype("uint8")
+            occulder_save_images(occ_depth_help_new, idx, scene_folder_name_init, depth_prefix="_occulder_depth")    
+
+
         # print('temp_obj_bbox_dict',temp_obj_bbox_dict)
         temp_obj_np = np.asarray(temp_obj_bbox_dict, dtype=np.float64)
         temp_bbox_padded_boxes = utils.padding_bboxes(temp_obj_np, MAX_OBJS)
