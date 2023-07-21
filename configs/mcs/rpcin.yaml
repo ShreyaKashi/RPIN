@@ -27,6 +27,8 @@ RPIN:
   INPUT_HEIGHT: 256 # 256 112
   INPUT_WIDTH: 384 # 384 224
   DEPTH_NORMALIZE: 10.0 # 384 224
+  # delete all other things, only leave focused objects
+  DELET_UNFOCUSED: True
   MAX_NUM_OBJS: 3
   # data augmentation
   HORIZONTAL_FLIP: True

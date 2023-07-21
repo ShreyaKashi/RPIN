@@ -14,7 +14,10 @@ class SS(Phys):
         super().__init__(data_root, split, image_ext)
 
         # self.video_list = sorted(glob(f'{self.data_root}/{self.split}/*/'))
-        self.video_list = sorted([folder for folder in glob(f'{self.data_root}/{self.split}/*/') if "depth" not in folder])
+        if C.RPIN.DELET_UNFOCUSED:
+            self.video_list = sorted([folder for folder in glob(f'{self.data_root}/{self.split}/*/') if "occulder" in folder and "depth" not in folder])
+        else:
+            self.video_list = sorted([folder for folder in glob(f'{self.data_root}/{self.split}/*/') if "_" not in folder])
         self.anno_list = [v[:-1] + '_boxes.pkl' for v in self.video_list]
 
         self.video_info = np.zeros((0, 2), dtype=np.int32)

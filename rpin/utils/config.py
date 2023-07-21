@@ -51,6 +51,8 @@ _C.RPIN.IMAGE_EXT = '.jpg'
 _C.RPIN.INPUT_HEIGHT = 360
 _C.RPIN.INPUT_WIDTH = 640
 _C.RPIN.DEPTH_NORMALIZE = 10.0
+# delete all other things, only leave focused objects
+_C.RPIN.DELET_UNFOCUSED = False
 # training setting
 _C.RPIN.MAX_NUM_OBJS = 3
 _C.RPIN.POSITION_LOSS_WEIGHT = 1

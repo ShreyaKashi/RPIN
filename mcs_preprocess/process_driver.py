@@ -210,7 +210,7 @@ for scene_name in reqd_scenes:
 
     scene_folder_path = os.path.join(MCS_ROOT_DIR, scene_name)
 
-    print('scene_folder_path',scene_folder_path)
+    # print('scene_folder_path',scene_folder_path)
     rgb_folder = os.path.join(scene_folder_path, "RGB")
     seg_mask = os.path.join(scene_folder_path, "Mask")
     depth_folder = os.path.join(scene_folder_path, "Depth")
