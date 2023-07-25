@@ -554,6 +554,9 @@ def get_structural_object_list(
             shape = "_".join(obj_name.split("_")[:-1])
             if shape == "":
                 shape = "support"
+            # mingqi gravity debug
+            if shape == "platform":
+                shape = "support"
 
         texture_color_list = obj["texture_color_list"]
         shape_str = (
@@ -688,6 +691,7 @@ def get_tracklets(
         for obj_id, (obj_name, obj) in enumerate(tracking_results.items()):
             new_tracking_results[obj_id + 1] = copy.deepcopy(obj)
             new_tracking_results[obj_id + 1]["obj_name"] = obj_name
+            # print('new_tracking_results[obj_id + 1]',new_tracking_results[obj_id + 1])
 
         # add is_stationary key 
         bottom_points_objs_steps = {}

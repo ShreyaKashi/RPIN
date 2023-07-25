@@ -86,7 +86,11 @@ def get_step_processed_out(scene_name):
         provide_shape=True,
     )
 
+    # print("expected_tracks",expected_tracks)
+
     seq = utils.get_metadata_from_pipleine(expected_tracks, scene_metadata, vid_len_details)
+
+    # print("seq",seq)
     states_dict_2 = utils.preprocessing(vid_len_details, seq, scene_metadata)
 
     return expected_tracks, scene_metadata, seq, states_dict_2   
@@ -103,6 +107,7 @@ def get_vid_start_len(scene_name, seq, states_dict_2):
         placer_entrance_frame = obj_entrance_events[placer_obj_id]
 
         all_focused_obj_ids = [k for k, v in states_dict_2.items() if v["obj_type"] == "focused" and not v["is_stationary"]]
+        # print(all_focused_obj_ids)
         assert len(all_focused_obj_ids) == 1
         focused_obj_id = all_focused_obj_ids[0]
 
@@ -152,6 +157,12 @@ def copy_process_images(frame_id, idx, folder_path, scene_folder_name_init, dept
     # print('loaded_src_img',loaded_src_img.shape)
     resized_img = cv2.resize(loaded_src_img, (SCALED_X, SCALED_Y))
 
+    if depth_prefix != "_depth":
+        resized_img =  cv2.cvtColor(
+                   resized_img,
+                   cv2.COLOR_RGB2BGR,
+               )
+
     if not os.path.exists(str(OUTPUT_DIR) + "/" + scene_folder_name_init + depth_prefix):
        os.makedirs(str(OUTPUT_DIR) + "/" + scene_folder_name_init + depth_prefix)
     cv2.imwrite(os.path.join(dst, target_file_name), resized_img)
@@ -172,6 +183,12 @@ def occulder_save_images(input, idx, scene_folder_name_init, depth_prefix=""):
     target_file_name = str(idx).zfill(3) + ".png"
 
     resized_img = cv2.resize(input, (SCALED_X, SCALED_Y))
+
+    if depth_prefix == "_occulder":
+        resized_img =  cv2.cvtColor(
+                   resized_img,
+                   cv2.COLOR_RGB2BGR,
+               )
 
     if not os.path.exists(str(OUTPUT_DIR) + "/" + scene_folder_name_init + depth_prefix):
        os.makedirs(str(OUTPUT_DIR) + "/" + scene_folder_name_init + depth_prefix)
@@ -248,12 +265,20 @@ for scene_name in reqd_scenes:
         occ_depth_help = 0
         occ_depth_help_mark = 0
 
+        # if scene_name == "grav_new6_000045_01_zz_plaus_6n":
+            # print(states_dict_2)
         # Get bbox and mask
         for k, v in states_dict_2.items():
             # print('k',k)
             # print('v',v)
+            # if scene_name == "grav_new6_000045_01_zz_plaus_6n":
+                # print(expected_tracks[k]['obj_name'])
+                # print(v["obj_type"])
             if v["obj_type"] == "focused":
                 bbox_vals = v["2dbbox"][frame_id]
+
+                # if scene_name == "grav_new6_000045_01_zz_plaus_6n":
+                #     print(bbox_vals)
                 
                 # bbox values reshaped
                 bbox_new_val = utils.bbox_scaler(scene_name, frame_id, bbox_vals, SCALED_X, SCALED_Y)
