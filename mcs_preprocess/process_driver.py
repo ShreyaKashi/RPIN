@@ -68,8 +68,9 @@ def get_reqd_scenes_list():
                 continue
 
         scene_list.append(scene_name)
-
-    return scene_list
+    # print(scene_list)
+    # print(sorted(scene_list))
+    return sorted(scene_list)
     
 def get_step_processed_out(scene_name):
     
@@ -223,6 +224,7 @@ scenes_generated = 0
 
 # print('reqd_scenes',reqd_scenes)
 
+scene_name_all = {}
 for scene_name in reqd_scenes:
 
     scene_folder_path = os.path.join(MCS_ROOT_DIR, scene_name)
@@ -365,8 +367,10 @@ for scene_name in reqd_scenes:
         # TODO: Check why flow goes here
         import pdb; pdb.set_trace()
 
+    scene_name_all[scene_folder_name_init] = scene_name
     scene_folder_name_init = str(int(scene_folder_name_init) + 1).zfill(4)
 
-
+with open('scene_name_dict.json', 'w') as f:
+    json.dump(scene_name_all, f)
 
 print("SCENES GENERATED: ", scenes_generated)
