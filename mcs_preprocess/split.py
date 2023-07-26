@@ -2,13 +2,13 @@ import random
 import json
 
 
-random.seed(100)
+random.seed(0)
 
-with open("./mcs_preprocess/scene_name_dict.json", "r", encoding="utf-8") as f:
+with open("./scene_name_dict.json", "r", encoding="utf-8") as f:
     content = json.load(f)
 
 
-test=random.sample(list(content.keys()), 35)
+test=list(content.keys())[-35:]
 train=list(set(list(content.keys()))-set(test))
 
 
@@ -23,8 +23,10 @@ for i in range(len(test)):
 print(len(train_set))
 print(len(test_set))
 
-with open('./mcs_preprocess/train_set_dict.json', 'w') as f:
+print(len(list(train_set.keys())+list(test_set.keys())))
+
+with open('./train_set_dict.json', 'w') as f:
     json.dump(train_set, f)
 
-with open('./mcs_preprocess/test_set_dict.json', 'w') as f:
+with open('./test_set_dict.json', 'w') as f:
     json.dump(test_set, f)

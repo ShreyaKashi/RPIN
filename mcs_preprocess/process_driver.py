@@ -11,6 +11,7 @@ import cv2
 from pathlib import Path
 import cam_help as cam_help
 import copy
+import random
 # from dotenv import load_dotenv
 
 # load_dotenv(dotenv_path=Path("/home/kashis/Desktop/Eval7/RPIN/.env"))
@@ -70,7 +71,9 @@ def get_reqd_scenes_list():
         scene_list.append(scene_name)
     # print(scene_list)
     # print(sorted(scene_list))
-    return sorted(scene_list)
+    random.seed(0)
+    random.shuffle(scene_list)
+    return scene_list
     
 def get_step_processed_out(scene_name):
     
@@ -222,7 +225,7 @@ max_vid_len = get_max_vid_len(reqd_scenes, False)
 
 scenes_generated = 0
 
-# print('reqd_scenes',reqd_scenes)
+print('reqd_scenes',reqd_scenes)
 
 scene_name_all = {}
 for scene_name in reqd_scenes:

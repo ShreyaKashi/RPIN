@@ -18,7 +18,7 @@ class SS(Phys):
             self.video_list = sorted([folder for folder in glob(f'{self.data_root}/{self.split}/*/') if "occulder" in folder and "depth" not in folder])
             self.anno_list = [v[:-1].replace("_occulder","") + '_boxes.pkl' for v in self.video_list]
         else:
-            self.video_list = sorted([folder for folder in glob(f'{self.data_root}/{self.split}/*/') if "_" not in folder])
+            self.video_list = sorted([folder for folder in glob(f'{self.data_root}/{self.split}/*/') if "occulder" not in folder and "depth" not in folder])
             self.anno_list = [v[:-1] + '_boxes.pkl' for v in self.video_list]
 
         self.video_info = np.zeros((0, 2), dtype=np.int32)
