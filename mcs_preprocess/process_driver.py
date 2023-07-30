@@ -112,6 +112,7 @@ def get_vid_start_len(scene_name, seq, states_dict_2):
 
         all_focused_obj_ids = [k for k, v in states_dict_2.items() if v["obj_type"] == "focused" and not v["is_stationary"]]
         # print(all_focused_obj_ids)
+        assert len([k for k, v in states_dict_2.items() if v["obj_type"] == "focused" ]) == 2
         assert len(all_focused_obj_ids) == 1
         focused_obj_id = all_focused_obj_ids[0]
 
@@ -317,6 +318,7 @@ for scene_name in reqd_scenes:
 
                 cropped_image = selected_mask[bbox_vals[1]:bbox_vals[1]+bbox_vals[3], bbox_vals[0]:bbox_vals[0]+bbox_vals[2]]
                 resized_cropped_img = cv2.resize(cropped_image.astype("float32"), (28, 28))
+                print(resized_cropped_img)
                 temp_obj_mask_list.append(resized_cropped_img)
 
                 json_file = os.path.join(step_output_folder, 'step_%06d.json' % frame_id)
