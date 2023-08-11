@@ -253,6 +253,7 @@ for scene_name in reqd_scenes:
     obj_mask_list = []
 
     obj_3dcenter_2d_list = []
+    obj_3dcenter_real_list = []
 
     # Trim videos and create a new dir
     for idx, frame_id in enumerate(range(vid_start_frame, min(vid_start_frame + max_vid_len, vid_len))):
@@ -265,6 +266,7 @@ for scene_name in reqd_scenes:
         temp_obj_bbox_dict = []
         temp_obj_mask_list = []
         temp_obj_3dcenter_2d_list = []
+        temp_obj_3dcenter_real_list = []
 
         occ_rgb_help = 0
         occ_rgb_help_mark = 0
@@ -327,8 +329,9 @@ for scene_name in reqd_scenes:
                 f.close()
                 cam = cam_help.read_cam_params(data_json)
                 objs = cam_help.read_objs_new(data_json, frame_id, expected_tracks[k]['obj_name'])
-                _, temp_amodal_center = cam_help.obtain_amodal_center(objs, cam)
+                _, temp_amodal_center, temp_3d_center = cam_help.obtain_amodal_center(objs, cam)
                 temp_obj_3dcenter_2d_list.append([k, temp_amodal_center[0][0],temp_amodal_center[0][1],temp_amodal_center[0][2]])
+                temp_obj_3dcenter_real_list.append([k,temp_3d_center[0][0],temp_3d_center[0][1],temp_3d_center[0][2]])
 
         if occ_rgb_help_mark !=0:
             occulder_save_images(occ_rgb_help, idx, scene_folder_name_init, depth_prefix="_occulder")
@@ -349,7 +352,8 @@ for scene_name in reqd_scenes:
 
         assert(len(obj_3dcenter_2d_list) == len(obj_bbox_list))
         # obj_amodal_center_all.append(amodal_center_all)
-
+        obj_3dcenter_real_list.append(temp_obj_3dcenter_real_list)
+        assert(len(obj_3dcenter_real_list) == len(obj_bbox_list))
         # print('amodal_center_all',amodal_center_all)
 
     
@@ -366,6 +370,10 @@ for scene_name in reqd_scenes:
         obj_3dcenter_np = np.asarray(obj_3dcenter_2d_list, dtype=np.float64)
         center3d_2d_dst = OUTPUT_DIR + "/" + scene_folder_name_init + "_3dcenter_2d.pkl"
         pickle.dump(obj_3dcenter_np, open(center3d_2d_dst, "wb"))
+
+        obj_3dcenter_real_np = np.asarray(obj_3dcenter_real_list, dtype=np.float64)
+        center3d_real_dst = OUTPUT_DIR + "/" + scene_folder_name_init + "_3dcenter_real.pkl"
+        pickle.dump(obj_3dcenter_real_np, open(center3d_real_dst, "wb"))
 
         scenes_generated += 1
     else:

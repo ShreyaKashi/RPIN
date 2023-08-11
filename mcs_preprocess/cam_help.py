@@ -222,6 +222,7 @@ def obtain_amodal_center(objs, cam):
     amodal_center_all = {}
     # obj_number = 1
     obj_all=[]
+    real_3d_center_all = []
     for obj in objs:
         x = 0
         y = 0 
@@ -233,6 +234,8 @@ def obtain_amodal_center(objs, cam):
         
         world_coords = [x / 8, y / 8, z / 8, 1]
 
+        real_3d_center_all.append([x / 8, y / 8, z / 8]) 
+
         cam_coords = np.dot(cam.extrinsic_mat, world_coords)
         assert(cam_coords[3] == 1)
 
@@ -243,7 +246,7 @@ def obtain_amodal_center(objs, cam):
         obj_all.append([x*scale[0], y*scale[1], cam_coords[2]])
         # obj_number+=1
 
-    return amodal_center_all, obj_all
+    return amodal_center_all, obj_all, real_3d_center_all
 
 def obtain_amodel_center_depth(objs, cam):
     
