@@ -8,8 +8,10 @@ from collections import defaultdict
 import cv2
 import numpy as np
 from scipy import ndimage
+import torch
 
 from objects import *
+from matplotlib import pyplot as plt
 
 DELTA_DISTANCE = 50
 DELTA_STATIONARY = 0.5
@@ -909,3 +911,93 @@ def padding_bboxes(object_bbox_np, max_num_objs):
     bbox_copy[:, 0] = np.arange(bbox_copy.shape[0]) + 1 #
     
     return bbox_copy  
+
+def rgb_tensor_point(rgb_tensor):
+    ind=rgb_tensor.nonzero()
+    value=rgb_tensor[rgb_tensor.nonzero()[:,0], rgb_tensor.nonzero()[:,1]].reshape(ind.shape[0],3)
+    obj_img_point=torch.cat([ind,value],1)
+    return obj_img_point
+
+def tensor_point(o_tensor):
+    wid = o_tensor.shape[0]
+    hei = o_tensor.shape[1]
+    if len(o_tensor.shape) == 3:
+        dim=3
+    else: 
+        dim =1
+    a=torch.Tensor(np.tile(range(hei), wid)).reshape(wid*hei,1)
+    b=torch.Tensor(np.repeat(range(wid), hei)).reshape(wid*hei,1)
+    ind=torch.cat([b,a],1)
+    value=torch.Tensor(o_tensor[ind[:,0].int(), ind[:,1].int(), ...].reshape(wid*hei,dim))
+    img_point=torch.cat([ind,value],1)
+    return img_point
+
+def obj_tensor_point(depth_tensor):
+
+    ind=depth_tensor.nonzero()
+    value=depth_tensor[depth_tensor.nonzero()[:,0], depth_tensor.nonzero()[:,1]].reshape(ind.shape[0],1)
+    obj_img_point=torch.cat([ind,value],1)
+
+    return obj_img_point
+
+def img_d_point(img_point, cam):
+
+    z = img_point[:,2:3]
+    x = (img_point[:,1:2] - cam.cx / cam.fx) * z
+    y = (img_point[:,0:1] - cam.cy / cam.fy) * z
+    
+    img_point_cloud = torch.cat([x,y,z],1)
+
+    return img_point_cloud
+
+def obj_d_point(depth_tensor, cam):
+
+    ind=depth_tensor.nonzero()
+    value=depth_tensor[depth_tensor.nonzero()[:,0], depth_tensor.nonzero()[:,1]].reshape(ind.shape[0],1)
+    obj_img_point=torch.cat([ind,value],1)
+
+    z = obj_img_point[:,2:3]
+    x = (obj_img_point[:,1:2] - cam.cx / cam.fx) * z
+    y = (obj_img_point[:,0:1] - cam.cy / cam.fy) * z
+    
+    obj_point_cloud = torch.cat([x,y,z],1)
+
+    return obj_point_cloud
+
+
+def obj_rgb_point(depth_tensor, cam):
+
+    ind=depth_tensor.nonzero()
+    value=depth_tensor[depth_tensor.nonzero()[:,0], depth_tensor.nonzero()[:,1]].reshape(ind.shape[0],1)
+    obj_img_point=torch.cat([ind,value],1)
+
+    z = obj_img_point[:,2:3]
+    x = (obj_img_point[:,1:2] - cam.cx / cam.fx) * z
+    y = (obj_img_point[:,0:1] - cam.cy / cam.fy) * z
+    
+    obj_point_cloud = torch.cat([x,y,z],1)
+
+    return obj_point_cloud
+
+
+def pc_cam_to_pc_world(pc, cam):
+    # extrinsic 中旋转的表达形式为旋转矩阵
+    # pc shape (n , 3)
+    # extrinsic shape (4, 4)
+    extr_inv = np.linalg.inv(cam.extrinsic_mat)  
+    R = extr_inv[:3, :3]
+    T = extr_inv[:3, 3]
+    pc_world = (R @ pc.numpy().T).T + T 
+    return pc_world
+
+def point_visualize(obj_pc_world, rgb_point):
+    xyz = np.array(obj_pc_world)
+    # print('xyz.shape',xyz.shape)
+    rgb = np.array(rgb_point)
+    # print('rgb.shape',rgb.shape)s
+    pcd = np.concatenate((xyz, rgb), axis=1)
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(pcd[:, 0], pcd[:, 1], pcd[:, 2], c=pcd[:, 3:] / 255)
+    plt.show()
+    return
