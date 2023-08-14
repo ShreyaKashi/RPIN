@@ -258,10 +258,10 @@ for scene_name in reqd_scenes:
     obj_3dcenter_2d_list = []
     obj_3dcenter_real_list = []
 
-    obj_rgbd_pc_world_list = []
-    obj_rgbd_pc_ind_list = []
-    obj_rgbd_pc_f_ind_list =[]
-    obj_rgbd_pc_f_ind_help = torch.zeros((1,1))
+    # obj_rgbd_pc_world_list = []
+    # obj_rgbd_pc_ind_list = []
+    # obj_rgbd_pc_f_ind_list =[]
+    # obj_rgbd_pc_f_ind_help = torch.zeros((1,1))
     # Trim videos and create a new dir
     for idx, frame_id in enumerate(range(vid_start_frame, min(vid_start_frame + max_vid_len, vid_len))):
 
@@ -278,7 +278,7 @@ for scene_name in reqd_scenes:
         temp_obj_3dcenter_real_list = []
         temp_obj_rgbd_pc_world_list = []
         temp_obj_rgbd_pc_ind_list = []
-        temp_obj_rgbd_pc_ind_help = torch.zeros((1,1))
+        temp_obj_rgbd_pc_ind_help = torch.zeros((1))
 
         occ_rgb_help = 0
         occ_rgb_help_mark = 0
@@ -417,13 +417,20 @@ for scene_name in reqd_scenes:
         # print('amodal_center_all',amodal_center_all)
 
         temp_obj_rgbd_pc_world_ts=torch.cat(temp_obj_rgbd_pc_world_list,0).double()
-        obj_rgbd_pc_world_list.append(temp_obj_rgbd_pc_world_ts)
-        temp_obj_rgbd_pc_ind_ts=torch.cat(temp_obj_rgbd_pc_ind_list,1)
-        obj_rgbd_pc_ind_list.append(temp_obj_rgbd_pc_ind_ts)
+        # obj_rgbd_pc_world_list.append(temp_obj_rgbd_pc_world_ts)
+        temp_obj_rgbd_pc_ind_ts=torch.cat(temp_obj_rgbd_pc_ind_list).int()
+        # obj_rgbd_pc_ind_list.append(temp_obj_rgbd_pc_ind_ts)
 
-        obj_rgbd_pc_f_ind_list.append(obj_rgbd_pc_f_ind_help)
-        obj_rgbd_pc_f_ind_help = obj_rgbd_pc_f_ind_help + temp_obj_rgbd_pc_world_ts.shape[0]
-    
+        if not os.path.exists(OUTPUT_DIR + "/" + scene_folder_name_init +"_pc"+ "/"):
+            os.makedirs(OUTPUT_DIR + "/" + scene_folder_name_init +"_pc"+ "/")
+        temp_obj_rgbd_pc_world_dst = OUTPUT_DIR + "/" + scene_folder_name_init +"_pc"+ "/" + str(idx).zfill(3) +".pkl"
+        pickle.dump(temp_obj_rgbd_pc_world_ts, open(temp_obj_rgbd_pc_world_dst, "wb"))
+
+        if not os.path.exists(OUTPUT_DIR + "/" + scene_folder_name_init +"_pc_ind"+ "/"):
+            os.makedirs(OUTPUT_DIR + "/" + scene_folder_name_init +"_pc_ind"+ "/")
+        temp_obj_rgbd_pc_ind_dst = OUTPUT_DIR + "/" + scene_folder_name_init +"_pc_ind"+ "/" + str(idx).zfill(3) +".pkl"
+        pickle.dump(temp_obj_rgbd_pc_ind_ts, open(temp_obj_rgbd_pc_ind_dst, "wb"))
+
     if len(obj_bbox_list)!= 0:
         print("Scene name: ", scene_name)
         obj_bbox_np = np.asarray(obj_bbox_list, dtype=np.float64)
@@ -442,21 +449,21 @@ for scene_name in reqd_scenes:
         center3d_real_dst = OUTPUT_DIR + "/" + scene_folder_name_init + "_3dcenter_real.pkl"
         pickle.dump(obj_3dcenter_real_np, open(center3d_real_dst, "wb"))
 
-        obj_rgbd_pc_world_ts = torch.cat(obj_rgbd_pc_world_list, 0).double()
-        obj_rgbd_pc_world_dst = OUTPUT_DIR + "/" + scene_folder_name_init + "_rgbd_pc.pkl"
-        pickle.dump(obj_rgbd_pc_world_ts, open(obj_rgbd_pc_world_dst, "wb"))
+        # obj_rgbd_pc_world_ts = torch.cat(obj_rgbd_pc_world_list, 0).double()
+        # obj_rgbd_pc_world_dst = OUTPUT_DIR + "/" + scene_folder_name_init + "_rgbd_pc.pkl"
+        # pickle.dump(obj_rgbd_pc_world_ts, open(obj_rgbd_pc_world_dst, "wb"))
 
-        obj_rgbd_pc_ind_ts = torch.cat(obj_rgbd_pc_ind_list, 0).int()
-        print('obj_rgbd_pc_ind_ts',obj_rgbd_pc_ind_ts)
-        print('obj_rgbd_pc_ind_ts',obj_rgbd_pc_ind_ts.shape)
-        obj_rgbd_pc_ind_dst = OUTPUT_DIR + "/" + scene_folder_name_init + "_pc_o_ind.pkl"
-        pickle.dump(obj_rgbd_pc_ind_ts, open(obj_rgbd_pc_ind_dst, "wb"))
+        # obj_rgbd_pc_ind_ts = torch.cat(obj_rgbd_pc_ind_list, 0).int()
+        # print('obj_rgbd_pc_ind_ts',obj_rgbd_pc_ind_ts)
+        # print('obj_rgbd_pc_ind_ts',obj_rgbd_pc_ind_ts.shape)
+        # obj_rgbd_pc_ind_dst = OUTPUT_DIR + "/" + scene_folder_name_init + "_pc_o_ind.pkl"
+        # pickle.dump(obj_rgbd_pc_ind_ts, open(obj_rgbd_pc_ind_dst, "wb"))
 
-        obj_rgbd_pc_f_ind_ts = torch.cat(obj_rgbd_pc_f_ind_list, 0).int()
-        print('obj_rgbd_pc_f_ind_ts',obj_rgbd_pc_f_ind_ts)
-        print('obj_rgbd_pc_f_ind_ts',obj_rgbd_pc_f_ind_ts.shape)
-        obj_rgbd_pc_f_ind_dst = OUTPUT_DIR + "/" + scene_folder_name_init + "_pc_f_ind.pkl"
-        pickle.dump(obj_rgbd_pc_f_ind_ts, open(obj_rgbd_pc_f_ind_dst, "wb"))
+        # obj_rgbd_pc_f_ind_ts = torch.cat(obj_rgbd_pc_f_ind_list, 0).int()
+        # print('obj_rgbd_pc_f_ind_ts',obj_rgbd_pc_f_ind_ts)
+        # print('obj_rgbd_pc_f_ind_ts',obj_rgbd_pc_f_ind_ts.shape)
+        # obj_rgbd_pc_f_ind_dst = OUTPUT_DIR + "/" + scene_folder_name_init + "_pc_f_ind.pkl"
+        # pickle.dump(obj_rgbd_pc_f_ind_ts, open(obj_rgbd_pc_f_ind_dst, "wb"))
 
         scenes_generated += 1
     else:

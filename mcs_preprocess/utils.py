@@ -981,7 +981,6 @@ def obj_rgb_point(depth_tensor, cam):
 
 
 def pc_cam_to_pc_world(pc, cam):
-    # extrinsic 中旋转的表达形式为旋转矩阵
     # pc shape (n , 3)
     # extrinsic shape (4, 4)
     extr_inv = np.linalg.inv(cam.extrinsic_mat)  
