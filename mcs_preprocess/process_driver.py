@@ -260,13 +260,14 @@ for scene_name in reqd_scenes:
 
     # obj_rgbd_pc_world_list = []
     # obj_rgbd_pc_ind_list = []
-    # obj_rgbd_pc_f_ind_list =[]
-    # obj_rgbd_pc_f_ind_help = torch.zeros((1,1))
+    obj_rgbd_pc_f_ind_list =[]
+    obj_rgbd_pc_f_ind_help = torch.zeros((1))
+    obj_rgbd_pc_f_ind_list.append(obj_rgbd_pc_f_ind_help)
     # Trim videos and create a new dir
     for idx, frame_id in enumerate(range(vid_start_frame, min(vid_start_frame + max_vid_len, vid_len))):
 
         # print('idx',idx,'frame_id',frame_id)
-        # if idx <5:
+        # if idx <23:
         #     continue
         
         rgb_help=copy_process_images(frame_id, idx, rgb_folder, scene_folder_name_init)
@@ -278,7 +279,8 @@ for scene_name in reqd_scenes:
         temp_obj_3dcenter_real_list = []
         temp_obj_rgbd_pc_world_list = []
         temp_obj_rgbd_pc_ind_list = []
-        temp_obj_rgbd_pc_ind_help = torch.zeros((1))
+        temp_obj_rgbd_pc_ind_help = torch.zeros((1,1))
+        temp_obj_rgbd_pc_ind_list.append(temp_obj_rgbd_pc_ind_help)
 
         occ_rgb_help = 0
         occ_rgb_help_mark = 0
@@ -330,8 +332,8 @@ for scene_name in reqd_scenes:
                 if np.sum(selected_mask) == 0:
                     continue
 
-                print('selected_maskshape',selected_mask.shape)
-                print('sum_selected_mask',np.sum(selected_mask))
+                # print('selected_maskshape',selected_mask.shape)
+                # print('sum_selected_mask',np.sum(selected_mask))
                 # print('selected_mask',selected_mask)
                 occ_rgb_help = occ_rgb_help + occulder_process_images(rgb_help, selected_mask)
                 occ_rgb_help_mark = 1
@@ -356,8 +358,8 @@ for scene_name in reqd_scenes:
                 temp_obj_3dcenter_2d_list.append([k, temp_amodal_center[0][0],temp_amodal_center[0][1],temp_amodal_center[0][2]])
                 temp_obj_3dcenter_real_list.append([k,temp_3d_center[0][0],temp_3d_center[0][1],temp_3d_center[0][2]])
                 # print('temp_obj_bbox_dict',temp_obj_bbox_dict)
-                print('temp_obj_3dcenter_2d_list',temp_obj_3dcenter_2d_list)
-                print('temp_obj_3dcenter_real_list',temp_obj_3dcenter_real_list)
+                # print('temp_obj_3dcenter_2d_list',temp_obj_3dcenter_2d_list)
+                # print('temp_obj_3dcenter_real_list',temp_obj_3dcenter_real_list)
 
                 d_obj_tensor = torch.from_numpy((depth_img * selected_mask).astype(np.float32))
                 # print('d_obj_tensor',d_obj_tensor)
@@ -365,13 +367,14 @@ for scene_name in reqd_scenes:
                 # print("d_obj_img_pc.shape",d_obj_img_pc)
                 d_obj_pc_cam = utils.obj_d_point(d_obj_tensor, cam)
                 d_obj_pc_world = utils.pc_cam_to_pc_world(d_obj_pc_cam, cam)
-                print("d_obj_pc_cam.shape",d_obj_pc_cam.shape)
+                # print("d_obj_pc_cam.shape",d_obj_pc_cam.shape)
                 # print("d_obj_pc_cam",d_obj_pc_cam)
                 # print("d_obj_pc_cam",d_obj_pc_cam[:,2].max())
                 
 
                 rgb_pc=occulder_process_images(rgb_help, selected_mask)
                 rgb_pc=torch.Tensor(rgb_pc[d_obj_img_pc[:,0].int(), d_obj_img_pc[:,1].int(),:])
+                # utils.point_visualize(d_obj_pc_cam, rgb_pc)
                 # utils.point_visualize(d_obj_pc_world, rgb_pc)
                 
                 # plt.imshow(rgb_help)
@@ -389,8 +392,8 @@ for scene_name in reqd_scenes:
                 # plt.show()
                 obj_rgbd_pc_world=torch.cat([d_obj_pc_cam,rgb_pc],1)
                 temp_obj_rgbd_pc_world_list.append(obj_rgbd_pc_world)
-                temp_obj_rgbd_pc_ind_list.append(temp_obj_rgbd_pc_ind_help)
                 temp_obj_rgbd_pc_ind_help = temp_obj_rgbd_pc_ind_help + obj_rgbd_pc_world.shape[0]
+                temp_obj_rgbd_pc_ind_list.append(temp_obj_rgbd_pc_ind_help)
                 
                 # assert(1==2)
         
@@ -418,8 +421,9 @@ for scene_name in reqd_scenes:
 
         temp_obj_rgbd_pc_world_ts=torch.cat(temp_obj_rgbd_pc_world_list,0).double()
         # obj_rgbd_pc_world_list.append(temp_obj_rgbd_pc_world_ts)
-        temp_obj_rgbd_pc_ind_ts=torch.cat(temp_obj_rgbd_pc_ind_list).int()
+        temp_obj_rgbd_pc_ind_ts=torch.cat(temp_obj_rgbd_pc_ind_list,1).int()
         # obj_rgbd_pc_ind_list.append(temp_obj_rgbd_pc_ind_ts)
+        # print('temp_obj_rgbd_pc_ind_ts',temp_obj_rgbd_pc_ind_ts)
 
         if not os.path.exists(OUTPUT_DIR + "/" + scene_folder_name_init +"_pc"+ "/"):
             os.makedirs(OUTPUT_DIR + "/" + scene_folder_name_init +"_pc"+ "/")
@@ -430,6 +434,9 @@ for scene_name in reqd_scenes:
             os.makedirs(OUTPUT_DIR + "/" + scene_folder_name_init +"_pc_ind"+ "/")
         temp_obj_rgbd_pc_ind_dst = OUTPUT_DIR + "/" + scene_folder_name_init +"_pc_ind"+ "/" + str(idx).zfill(3) +".pkl"
         pickle.dump(temp_obj_rgbd_pc_ind_ts, open(temp_obj_rgbd_pc_ind_dst, "wb"))
+
+        obj_rgbd_pc_f_ind_help = obj_rgbd_pc_f_ind_help + temp_obj_rgbd_pc_world_ts.shape[0]
+        obj_rgbd_pc_f_ind_list.append(obj_rgbd_pc_f_ind_help)
 
     if len(obj_bbox_list)!= 0:
         print("Scene name: ", scene_name)
@@ -459,11 +466,11 @@ for scene_name in reqd_scenes:
         # obj_rgbd_pc_ind_dst = OUTPUT_DIR + "/" + scene_folder_name_init + "_pc_o_ind.pkl"
         # pickle.dump(obj_rgbd_pc_ind_ts, open(obj_rgbd_pc_ind_dst, "wb"))
 
-        # obj_rgbd_pc_f_ind_ts = torch.cat(obj_rgbd_pc_f_ind_list, 0).int()
+        obj_rgbd_pc_f_ind_ts = torch.cat(obj_rgbd_pc_f_ind_list, 0).int()
         # print('obj_rgbd_pc_f_ind_ts',obj_rgbd_pc_f_ind_ts)
         # print('obj_rgbd_pc_f_ind_ts',obj_rgbd_pc_f_ind_ts.shape)
-        # obj_rgbd_pc_f_ind_dst = OUTPUT_DIR + "/" + scene_folder_name_init + "_pc_f_ind.pkl"
-        # pickle.dump(obj_rgbd_pc_f_ind_ts, open(obj_rgbd_pc_f_ind_dst, "wb"))
+        obj_rgbd_pc_f_ind_dst = OUTPUT_DIR + "/" + scene_folder_name_init + "_pc_find.pkl"
+        pickle.dump(obj_rgbd_pc_f_ind_ts, open(obj_rgbd_pc_f_ind_dst, "wb"))
 
         scenes_generated += 1
     else:

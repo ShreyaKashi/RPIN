@@ -85,6 +85,8 @@ _C.RPIN.N_EXTRA_AGGREGATOR_F = 0
 _C.RPIN.EXTRA_F_KERNEL = 3
 _C.RPIN.EXTRA_F_PADDING = 1
 _C.RPIN.SEQ_CLS_LOSS_WEIGHT = 0.0
+# Point Cloud Model
+_C.RPIN.PCF_ARGS = "./pcf_config/configPCF_5cm.yaml"
 
 # ---------------------------------------------------------------------------- #
 # Misc options
