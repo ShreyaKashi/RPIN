@@ -22,7 +22,7 @@ MCS_ROOT_DIR = './after_eval'
 STORE_PATH = os.getenv("STORE_PATH")
 # OUTPUT_DIR = os.getenv("OUTPUT_DIR")
 # OUTPUT_DIR = os.getenv("OUTPUT_DIR")
-OUTPUT_DIR = './after_eval_process_3d_center'
+OUTPUT_DIR = './after_eval_process_pc'
 
 # MCS_ROOT_DIR = os.getenv("MCS_ROOT_DIR")
 # STORE_PATH = os.getenv("STORE_PATH")
@@ -374,6 +374,8 @@ for scene_name in reqd_scenes:
 
                 rgb_pc=occulder_process_images(rgb_help, selected_mask)
                 rgb_pc=torch.Tensor(rgb_pc[d_obj_img_pc[:,0].int(), d_obj_img_pc[:,1].int(),:])
+                if len(rgb_pc.shape)==1:
+                    rgb_pc=rgb_pc.unsqueeze(0)
                 # utils.point_visualize(d_obj_pc_cam, rgb_pc)
                 # utils.point_visualize(d_obj_pc_world, rgb_pc)
                 

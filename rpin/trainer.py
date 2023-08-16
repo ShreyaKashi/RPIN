@@ -47,13 +47,20 @@ class Trainer(object):
             self.epochs += 1
 
     def train_epoch(self):
-        for batch_idx, (data, data_t, rois, gt_boxes, gt_masks, gt_center3d_2d, gt_center3d_2d_offset, valid, g_idx, seq_l) in enumerate(self.train_loader):
+        for batch_idx, (point_coord, point_color, point_nei_forward, point_nei_propagate, point_nei_self, data_pc_ind, data_pc_find, gt_center3d_real, g_idx, labels) in enumerate(self.train_loader):
             self._adjust_learning_rate()
-            data, data_t = data.to(self.device), data_t.to(self.device)
-            rois = xyxy_to_rois(rois, batch=data.shape[0], time_step=data.shape[1], num_devices=self.num_gpus)
+            point_coord = point_coord.to(self.device)
+            point_color = point_color.to(self.device)
+            point_nei_forward = point_nei_forward.to(self.device)
+            point_nei_propagate = point_nei_propagate.to(self.device)
+            point_nei_self = point_nei_self.to(self.device)
+            data_pc_ind = data_pc_ind.to(self.device)
+            data_pc_find = data_pc_find.to(self.device)
+
+            # rois = xyxy_to_rois(rois, batch=data.shape[0], time_step=data.shape[1], num_devices=self.num_gpus)
             self.optim.zero_grad()
 
-            outputs = self.model(data, rois, num_rollouts=self.ptrain_size, g_idx=g_idx, x_t=data_t, phase='train')
+            outputs = self.model(point_list, rois, num_rollouts=self.ptrain_size, g_idx=g_idx, x_t=data_t, phase='train')
             labels = {
                 'boxes': gt_boxes.to(self.device),
                 'masks': gt_masks.to(self.device),

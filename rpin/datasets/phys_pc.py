@@ -37,7 +37,7 @@ class Phys_pc(Dataset):
     def __getitem__(self, idx):
         vid_idx, img_idx = self.video_pc_info[idx, 0], self.video_pc_info[idx, 1]
         video_pc_name, anno_name = self.video_pc_list[vid_idx], self.anno_list[vid_idx]
-        data_pc_rgbd, data_pc_ind, data_pc_find, data_t = self._parse_image(video_pc_name, vid_idx, img_idx)
+        data_pc_rgbd, data_pc_ind, data_pc_find = self._parse_image(video_pc_name, vid_idx, img_idx)
         # if C.RPIN.VAE:
         #     data, data_t = self._parse_image(video_pc_name, vid_idx, img_idx)
         # else:
@@ -61,7 +61,7 @@ class Phys_pc(Dataset):
         # data_pc_d = data_pc_rgbd[:,:3].copy()
 
         coord = data_pc_rgbd[:, :3]
-        color = data_pc_rgbd[:, 3:]
+        point_color = data_pc_rgbd[:, 3:]
         norm = None
 
         z_min = coord[:, 2].min()
@@ -70,9 +70,26 @@ class Phys_pc(Dataset):
         coord_min = np.min(coord, 0)
         coord -= coord_min
 
-        point_list, nei_forward_list, nei_propagate_list, nei_self_list, norm_list = \
-            subsample_and_knn(coord, norm, grid_size=self.subsample_and_knn_cfg.grid_size, K_self=self.subsample_and_knn_cfg.K_self,
+        num_objs = data_pc_ind.shape[1] - 1
+        g_idx = []
+        for i in range(C.RPIN.MAX_NUM_OBJS):
+            for j in range(C.RPIN.MAX_NUM_OBJS):
+                if j == i:
+                    continue
+                g_idx.append([i, j, (i < num_objs) * (j < num_objs)])
+        g_idx = np.array(g_idx)
+
+
+        point_list_all, nei_forward_list_all, nei_propagate_list_all, nei_self_list_all, norm_list_all = [] ,[] ,[] ,[] ,[]
+        for i in range(data_pc_find.shape[0]-1):
+            point_list, nei_forward_list, nei_propagate_list, nei_self_list, norm_list = \
+                subsample_and_knn(coord[data_pc_find[i]:data_pc_find[i+1],:], norm, grid_size=self.subsample_and_knn_cfg.grid_size, K_self=self.subsample_and_knn_cfg.K_self,
                               K_forward=self.subsample_and_knn_cfg.K_forward, K_propagate=self.subsample_and_knn_cfg.K_propagate)
+            point_list_all.append(point_list)
+            nei_forward_list_all.append(nei_forward_list)
+            nei_propagate_list_all.append(nei_propagate_list)
+            nei_self_list_all.append(nei_self_list)
+            norm_list_all.append(norm_list)
 
         # gt 3dcenter real
         gt_center3d_real=center3d_real[self.input_size:].copy()
@@ -80,8 +97,12 @@ class Phys_pc(Dataset):
 
         labels = torch.zeros(1)  # a fake variable used to make interface consistent
         gt_center3d_real = torch.from_numpy(gt_center3d_real.astype(np.float32))
+        point_coord = torch.cat(point_list_all,1).double()
+        point_nei_forward = torch.cat(nei_forward_list_all,1).double()
+        point_nei_propagate = torch.cat(nei_propagate_list_all,1).double()
+        point_nei_self = torch.cat(nei_self_list_all,1).double()
 
-        return point_list, color, data_pc_ind, data_pc_find, gt_center3d_real, labels
+        return point_coord, point_color, point_nei_forward, point_nei_propagate, point_nei_self, data_pc_ind, data_pc_find, gt_center3d_real, g_idx, labels
 
     def _parse_image(self, video_pc_name, vid_idx, img_idx):
         raise NotImplementedError

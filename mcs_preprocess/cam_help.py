@@ -243,11 +243,11 @@ def obtain_amodal_center(objs, cam):
         real_3d_center_all.append([x / 8, y / 8, z / 8]) 
 
         cam_coords = np.dot(cam.extrinsic_mat, world_coords)
-        print('cam_coords',cam_coords)
+        # print('cam_coords',cam_coords)
         assert(cam_coords[3] == 1)
 
         img_coords = np.dot(cam.intrinsic_mat, np.dot(cam.extrinsic_mat, world_coords))
-        print('img_coords',img_coords)
+        # print('img_coords',img_coords)
         x = int(img_coords[0] / img_coords[2])
         y = int(img_coords[1] / img_coords[2])
         amodal_center_all[obj.obj_id] = [x, y]
