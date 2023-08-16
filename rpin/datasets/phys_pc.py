@@ -8,7 +8,7 @@ from copy import deepcopy
 
 from rpin.utils.config import _C as C
 from rpin.utils.bbox import xyxy2xywh
-from pc_common import subsample_and_knn
+from rpin.datasets.pc_common import subsample_and_knn
 import yaml
 
 plot = False

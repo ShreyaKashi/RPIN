@@ -1,9 +1,9 @@
 import torch
 import numpy as np
 from sklearn.neighbors import KDTree
-import cpp_wrappers.cpp_subsampling.grid_subsampling as cpp_subsampling
+import rpin.datasets.cpp_wrappers.cpp_subsampling.grid_subsampling as cpp_subsampling
 try:
-    import cpp_wrappers.cpp_neighbors.radius_neighbors as cpp_neighbors
+    import rpin.datasets.cpp_wrappers.cpp_neighbors.radius_neighbors as cpp_neighbors
 except BaseException:
     print('Failed to import cpp_neighbors, nanoflann kNN is not loaded. Only sklearn kNN is available')
 

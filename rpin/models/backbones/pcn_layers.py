@@ -8,8 +8,8 @@ from torch import nn
 import torch.nn.functional as F
 from timm.models.layers import DropPath
 
-from pcn_util.checkpoint import CheckpointFunction
-from pcn_layer_utils import PConv, PCF, index_points, VI_coordinate_transform, Linear_BN, UnaryBlock
+from rpin.models.backbones.pcn_util.checkpoint import CheckpointFunction
+from rpin.models.backbones.pcn_layer_utils import PConv, PCF, index_points, VI_coordinate_transform, Linear_BN, UnaryBlock
 
 # Main PointConv/PointConvFormer Layers are:
 # PointConv, PointConvStridePE, PCFLayer, PointConvTransposePE
