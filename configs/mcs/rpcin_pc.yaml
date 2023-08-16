@@ -1,0 +1,62 @@
+# MCS RPCIN YAML
+OUTPUT_DIR: ./outputs/phys
+DATA_ROOT: '/home/mingqi/Desktop/RPIN/3d_center/RPIN_MCS/data/mcs_withd_3dcenter_2d'
+DATASET_ABS: 'SS_PC'
+SOLVER:
+  BASE_LR: 2.0e-4  # single GPU LR
+  WEIGHT_DECAY: 0.0
+  SCHEDULER: 'cosine'
+  MAX_ITERS: 1000000
+  WARMUP_ITERS: 40000
+  VAL_INTERVAL: 200000
+  BATCH_SIZE: 5 # single GPU Batch Size
+INPUT: #TODO: Need to change the mean and std across
+  IMAGE_MEAN: [ 82.94735451,  92.58477129, 100.01230156]
+  IMAGE_STD: [45.84235784, 50.44042904, 54.49678948]
+  IMAGE_CHANNEL: 4
+  PRELOAD_TO_MEMORY: False
+RPIN:
+  BACKBONE: 'hourglass_bn'
+  ARCH: 'rpcin_pc'
+  VE_FEAT_DIM: 256
+  IN_FEAT_DIM: 256
+  # prediction setting:
+  INPUT_SIZE: 3
+  PRED_SIZE_TRAIN: 15
+  PRED_SIZE_TEST: 25
+  # input setting:
+  INPUT_HEIGHT: 256 # 256 112
+  INPUT_WIDTH: 384 # 384 224
+  DEPTH_NORMALIZE: 10.0 # 384 224
+  # delete all other things, only leave focused objects
+  DELET_UNFOCUSED: False
+  MAX_NUM_OBJS: 3
+  # data augmentation
+  HORIZONTAL_FLIP: False
+  VERTICAL_FLIP: False
+  # loss weight
+  POSITION_LOSS_WEIGHT: 1
+  # ----- RoIPooling Setting
+  ROI_POOL_SIZE: 7
+  ROI_POOL_SAMPLE_R: 2
+  # ----- mask prediction
+  MASK_LOSS_WEIGHT: 0.001
+  MASK_SIZE: 28
+  # 3d ceenter prediction
+  CENTER3D_2D_OFFSET_LOSS_WEIGHT: 10.0
+  CENTER3D_2D_INVERSE_DEPTH: FALSE
+  CENTER3D_2D_DEPTH_LOSS_WEIGHT: 0.01
+  # ----- Architecture
+  N_EXTRA_ROI_F: 2
+  N_EXTRA_PRED_F: 0
+  N_EXTRA_SELFD_F: 0
+  N_EXTRA_RELD_F: 0
+  N_EXTRA_AFFECTOR_F: 0
+  N_EXTRA_AGGREGATOR_F: 0
+  EXTRA_F_KERNEL: 3
+  EXTRA_F_PADDING: 1
+  IMAGE_EXT: '.pkl'
+  # VAE: True
+  # VAE_KL_LOSS_WEIGHT: 3e-5
+  # Point Cloud
+  PCF_ARGS: "./pcf_config/configPCF_5cm.yaml"
