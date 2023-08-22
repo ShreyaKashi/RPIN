@@ -170,7 +170,7 @@ def subsample_and_knn(
             nself = compute_knn(sub_point, sub_point, K_self[j])
             # point_list is a list with len(grid_size) length, each item is a numpy array
             # of num_points x dimensionality
-            print("j",j)
+            # print("j",j)
             # print('grid_s',grid_s)
             # print('K_self[j]',K_self[j])
             # print("sub_point",sub_point.shape)
