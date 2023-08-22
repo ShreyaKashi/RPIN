@@ -20,9 +20,10 @@ class SS_PC(Phys_pc):
         # else:
         #     self.video_pc_list = sorted([folder for folder in glob(f'{self.data_root}/{self.split}/*/') if "occulder" not in folder and "depth" not in folder])
         #     self.anno_list = [v[:-1] + '_boxes.pkl' for v in self.video_pc_list]
-
+        # print(self.data_root)
         self.video_pc_list = sorted([folder for folder in glob(f'{self.data_root}/{self.split}/*/') if "_pc" in folder and "_pc_ind" not in folder])
         # self.anno_list = [v[:-1] + '_3dcenter_real.pkl' for v in self.video_pc_list]
+        # print(self.video_pc_list)
         self.anno_list = [v[:-1] + '_find.pkl' for v in self.video_pc_list]
 
         self.video_pc_info = np.zeros((0, 2), dtype=np.int32)
@@ -50,13 +51,14 @@ class SS_PC(Phys_pc):
 
         data_pc_rgbd = torch.cat([
             pickle.load(open(image_pc_name, "rb")) for image_pc_name in image_pc_list
-        ], 1)
+        ], 0).numpy().astype(np.float32)
 
         data_pc_ind = torch.cat([
             pickle.load(open(image_pc_name, "rb")) for image_pc_name in image_pc_ind_list
-        ], 1)
+        ], 0).numpy()
 
         data_pc_find = pickle.load(open(video_pc_name[:-1]+"_find.pkl", "rb"))[img_idx:img_idx + self.input_size + 1]
+        data_pc_find = (data_pc_find - torch.min(data_pc_find) ).numpy()
         # data_pc_ind = np.expand_dims(data_pc_ind, axis=1)
 
         # for c in range(3):

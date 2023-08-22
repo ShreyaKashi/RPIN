@@ -30,6 +30,7 @@ class Phys_pc(Dataset):
         self.video_pc_list, self.anno_list = None, None
         self.video_pc_info = None
         self.subsample_and_knn_cfg = yaml.safe_load(open(C.RPIN.PCF_ARGS, 'r'))
+        self.use_grid_level = 1
 
     def __len__(self):
         return self.video_pc_info.shape[0]
@@ -38,13 +39,14 @@ class Phys_pc(Dataset):
         vid_idx, img_idx = self.video_pc_info[idx, 0], self.video_pc_info[idx, 1]
         video_pc_name, anno_name = self.video_pc_list[vid_idx], self.anno_list[vid_idx]
         data_pc_rgbd, data_pc_ind, data_pc_find = self._parse_image(video_pc_name, vid_idx, img_idx)
-        # if C.RPIN.VAE:
-        #     data, data_t = self._parse_image(video_pc_name, vid_idx, img_idx)
-        # else:
-        #     data = self._parse_image(video_pc_name, vid_idx, img_idx) #NOTE: since this is tuple of array, got only the first element
-        #     data_t = data.copy()
-            
+        
+        print('data_pc_rgbd',data_pc_rgbd.shape[0])
+        print("data_pc_find",data_pc_find)
+        print("data_pc_ind",data_pc_ind)
+
         center3d_real = self._parse_label(anno_name, vid_idx, img_idx)
+
+        all_data = {}
 
         # image flip augmentation
         # if random.random() > 0.5 and self.split == 'train' and C.RPIN.HORIZONTAL_FLIP:
@@ -67,7 +69,7 @@ class Phys_pc(Dataset):
         z_min = coord[:, 2].min()
         coord[:, 2] -= z_min
 
-        coord_min = np.min(coord, 0)
+        coord_min = coord.min(0)
         coord -= coord_min
 
         num_objs = data_pc_ind.shape[1] - 1
@@ -79,17 +81,24 @@ class Phys_pc(Dataset):
                 g_idx.append([i, j, (i < num_objs) * (j < num_objs)])
         g_idx = np.array(g_idx)
 
-
         point_list_all, nei_forward_list_all, nei_propagate_list_all, nei_self_list_all, norm_list_all = [] ,[] ,[] ,[] ,[]
         for i in range(data_pc_find.shape[0]-1):
+            # print("i",i)
+            # print('coord[data_pc_find[i]:data_pc_find[i+1],:]',coord[data_pc_find[i]:data_pc_find[i+1],:].shape)
             point_list, nei_forward_list, nei_propagate_list, nei_self_list, norm_list = \
-                subsample_and_knn(coord[data_pc_find[i]:data_pc_find[i+1],:], norm, grid_size=self.subsample_and_knn_cfg.grid_size, K_self=self.subsample_and_knn_cfg.K_self,
-                              K_forward=self.subsample_and_knn_cfg.K_forward, K_propagate=self.subsample_and_knn_cfg.K_propagate)
-            point_list_all.append(point_list)
-            nei_forward_list_all.append(nei_forward_list)
-            nei_propagate_list_all.append(nei_propagate_list)
-            nei_self_list_all.append(nei_self_list)
-            norm_list_all.append(norm_list)
+                subsample_and_knn(coord[data_pc_find[i]:data_pc_find[i+1],:], norm, grid_size=self.subsample_and_knn_cfg["grid_size"], K_self=self.subsample_and_knn_cfg["K_self"],
+                              K_forward=self.subsample_and_knn_cfg["K_forward"], K_propagate=self.subsample_and_knn_cfg["K_propagate"])
+            # print('point_list',len(point_list))
+            # print('nei_forward_list',len(nei_forward_list))
+            # print('nei_self_list',len(nei_self_list))
+            # point_list_all.append(point_list)
+            # nei_forward_list_all.append(nei_forward_list)
+            # # nei_propagate_list_all.append(nei_propagate_list)
+            # nei_self_list_all.append(nei_self_list)
+            # norm_list_all.append(norm_list)
+            point_list_all += point_list
+            nei_forward_list_all +=  nei_forward_list
+            nei_self_list_all += nei_self_list
 
         # gt 3dcenter real
         gt_center3d_real=center3d_real[self.input_size:].copy()
@@ -97,12 +106,26 @@ class Phys_pc(Dataset):
 
         labels = torch.zeros(1)  # a fake variable used to make interface consistent
         gt_center3d_real = torch.from_numpy(gt_center3d_real.astype(np.float32))
-        point_coord = torch.cat(point_list_all,1).double()
-        point_nei_forward = torch.cat(nei_forward_list_all,1).double()
-        point_nei_propagate = torch.cat(nei_propagate_list_all,1).double()
-        point_nei_self = torch.cat(nei_self_list_all,1).double()
 
-        return point_coord, point_color, point_nei_forward, point_nei_propagate, point_nei_self, data_pc_ind, data_pc_find, gt_center3d_real, g_idx, labels
+        all_data['label_list'] = labels
+        all_data['feature_list'] = [point_color]
+        all_data['point_list'] = point_list_all
+        all_data['nei_forward_list'] = nei_forward_list_all
+        # all_data['nei_propagate_list'] = nei_propagate_list_all
+        all_data['nei_self_list'] = nei_self_list_all
+        # all_data['surface_normal_list'] = norm_list
+
+        all_data['data_pc_ind'] = data_pc_ind
+        all_data['data_pc_find'] = data_pc_find
+        all_data['gt_center3d_real'] = gt_center3d_real
+        all_data['g_idx'] = g_idx
+
+        # print('data_pc_ind',data_pc_ind.shape)
+        # print('data_pc_find',data_pc_find.shape)
+
+        # assert 1==2
+
+        return all_data
 
     def _parse_image(self, video_pc_name, vid_idx, img_idx):
         raise NotImplementedError

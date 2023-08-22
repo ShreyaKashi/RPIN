@@ -11,6 +11,7 @@ from rpin.utils.config import _C as cfg
 from rpin.utils.logger import setup_logger, git_diff_config
 from rpin.models import *
 from rpin.trainer import Trainer
+from rpin.datasets.pc_common import collect_fn
 
 class DObj(object):
     pass
@@ -40,7 +41,6 @@ def main():
     # args_dict = {'cfg': 'configs/mcs/rpcin.yaml', 'output': 'train_ptrain20_may31', 'gpus': '0', 'seed': 0, 'init': None}
     # args = DObj()
     # args.__dict__ = args_dict
-
     rng_seed = args.seed
     random.seed(rng_seed)
     np.random.seed(rng_seed)
@@ -95,12 +95,14 @@ def main():
     torch.manual_seed(rng_seed)
     train_set = eval(f'{cfg.DATASET_ABS}')(data_root=cfg.DATA_ROOT, split='train', image_ext=cfg.RPIN.IMAGE_EXT)
     val_set = eval(f'{cfg.DATASET_ABS}')(data_root=cfg.DATA_ROOT, split='test', image_ext=cfg.RPIN.IMAGE_EXT)
-    kwargs = {'pin_memory': True, 'num_workers': 4}
+    # kwargs = {'pin_memory': True, 'num_workers': 4}
+    kwargs = {'pin_memory': True, 'num_workers': 0}
+    print('train_set',train_set)
     train_loader = torch.utils.data.DataLoader(
-        train_set, batch_size=cfg.SOLVER.BATCH_SIZE, shuffle=True, **kwargs,
+        train_set, batch_size=cfg.SOLVER.BATCH_SIZE, collate_fn=collect_fn, shuffle=True, **kwargs,
     )
     val_loader = torch.utils.data.DataLoader(
-        val_set, batch_size=1 if cfg.RPIN.VAE else cfg.SOLVER.BATCH_SIZE, shuffle=False, **kwargs,
+        val_set, batch_size=1 if cfg.RPIN.VAE else cfg.SOLVER.BATCH_SIZE, collate_fn=collect_fn, shuffle=False, **kwargs,
     )
     print(f'size: train {len(train_loader)} / test {len(val_loader)}')
 

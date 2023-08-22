@@ -47,7 +47,8 @@ class Trainer(object):
             self.epochs += 1
 
     def train_epoch(self):
-        for batch_idx, (point_coord, point_color, point_nei_forward, point_nei_propagate, point_nei_self, data_pc_ind, data_pc_find, gt_center3d_real, g_idx, labels) in enumerate(self.train_loader):
+        for batch_idx, (features, pointclouds, edges_self, edges_forward, data_pc_ind_tensor, data_pc_find_tensor, gt_center3d_real_tensor, g_idx_tensor, labels_tensor, data_pc_bind_tensor) in enumerate(self.train_loader):
+                        
             self._adjust_learning_rate()
             point_coord = point_coord.to(self.device)
             point_color = point_color.to(self.device)
