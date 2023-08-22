@@ -40,9 +40,9 @@ class Phys_pc(Dataset):
         video_pc_name, anno_name = self.video_pc_list[vid_idx], self.anno_list[vid_idx]
         data_pc_rgbd, data_pc_ind, data_pc_find = self._parse_image(video_pc_name, vid_idx, img_idx)
         
-        print('data_pc_rgbd',data_pc_rgbd.shape[0])
-        print("data_pc_find",data_pc_find)
-        print("data_pc_ind",data_pc_ind)
+        # print('data_pc_rgbd',data_pc_rgbd.shape[0])
+        # print("data_pc_find",data_pc_find)
+        # print("data_pc_ind",data_pc_ind)
 
         center3d_real = self._parse_label(anno_name, vid_idx, img_idx)
 

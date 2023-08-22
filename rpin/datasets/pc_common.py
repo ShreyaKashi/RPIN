@@ -350,6 +350,9 @@ def collect_fn(data_list):
     edges_forward=[]
 
     data_pc_ind_list = []
+    data_pc_ind_help_list = []
+    data_pc_ind_help_list_help = 0
+    data_pc_ind_help_list.append(data_pc_ind_help_list_help)
     data_pc_find_list = []
     gt_center3d_real_list = []
     g_idx_list = []
@@ -368,8 +371,10 @@ def collect_fn(data_list):
         edges_self.append(all_data['nei_self_list'])
 
         data_pc_ind_list.append(all_data['data_pc_ind'])
-        data_pc_find_list.append(all_data['data_pc_find'])
-        gt_center3d_real_list.append(all_data['gt_center3d_real'])
+        data_pc_ind_help_list_help += all_data['data_pc_ind'].shape[1]
+        data_pc_ind_help_list.append(data_pc_ind_help_list_help)
+        data_pc_find_list.append(all_data['data_pc_find'][np.newaxis, ...])
+        gt_center3d_real_list.append(all_data['gt_center3d_real'][np.newaxis, ...])
         g_idx_list.append(all_data['g_idx'])
         labels_list.append(all_data['label_list'])
 
@@ -380,12 +385,13 @@ def collect_fn(data_list):
     features, pointclouds, edges_self, edges_forward = \
         prepare(features, pointclouds, edges_self, edges_forward)
     
-    data_pc_ind_tensor = torch.from_numpy(np.concatenate(data_pc_ind_list, 0))
+    data_pc_ind_tensor = torch.from_numpy(np.concatenate(data_pc_ind_list, 1))
+    data_pc_ind_help_tensor = torch.Tensor(data_pc_ind_help_list).long()
     data_pc_find_tensor = torch.from_numpy(np.concatenate(data_pc_find_list, 0))
-    gt_center3d_real_tensor = torch.from_numpy(np.concatenate(gt_center3d_real_list, 0))
+    gt_center3d_real_tensor = torch.cat(gt_center3d_real_list, 0)
     g_idx_tensor = torch.from_numpy(np.concatenate(g_idx_list, 0))
     labels_tensor = torch.from_numpy(np.concatenate(labels_list, 0))
     data_pc_bind_tensor = torch.Tensor(data_pc_bind_list).long()
 
     
-    return features, pointclouds, edges_self, edges_forward, data_pc_ind_tensor, data_pc_find_tensor, gt_center3d_real_tensor, g_idx_tensor, labels_tensor, data_pc_bind_tensor
+    return features, pointclouds, edges_self, edges_forward, data_pc_ind_tensor, data_pc_ind_help_tensor, data_pc_find_tensor, data_pc_bind_tensor, gt_center3d_real_tensor, g_idx_tensor, labels_tensor

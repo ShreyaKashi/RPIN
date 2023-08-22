@@ -58,7 +58,7 @@ class SS_PC(Phys_pc):
         ], 0).numpy()
 
         data_pc_find = pickle.load(open(video_pc_name[:-1]+"_find.pkl", "rb"))[img_idx:img_idx + self.input_size + 1]
-        data_pc_find = (data_pc_find - torch.min(data_pc_find) ).numpy()
+        data_pc_find = (data_pc_find - torch.min(data_pc_find) ).numpy().T
         # data_pc_ind = np.expand_dims(data_pc_ind, axis=1)
 
         # for c in range(3):

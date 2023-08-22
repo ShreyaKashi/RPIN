@@ -97,7 +97,7 @@ def main():
     val_set = eval(f'{cfg.DATASET_ABS}')(data_root=cfg.DATA_ROOT, split='test', image_ext=cfg.RPIN.IMAGE_EXT)
     # kwargs = {'pin_memory': True, 'num_workers': 4}
     kwargs = {'pin_memory': True, 'num_workers': 0}
-    print('train_set',train_set)
+    # print('train_set',train_set)
     train_loader = torch.utils.data.DataLoader(
         train_set, batch_size=cfg.SOLVER.BATCH_SIZE, collate_fn=collect_fn, shuffle=True, **kwargs,
     )

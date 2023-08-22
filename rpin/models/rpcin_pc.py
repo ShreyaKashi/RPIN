@@ -92,11 +92,12 @@ class Net(nn.Module):
                 nn.Sigmoid()
             )
 
-    def forward(self, x, rois, num_rollouts=10, g_idx=None, x_t=None, phase='train'):
+    def forward(self, features, pointclouds, edges_self, edges_forward, data_pc_ind_tensor, data_pc_find_tensor, data_pc_bind_tensor, num_rollouts=10, g_idx=None, x_t=None, phase='train'):
         self.num_objs = rois.shape[2]
         # x: (b, t, c, h, w)
         # reshape time to batch dimension
-        batch_size, time_step = x.shape[:2]
+        batch_size = data_pc_bind_tensor.shape[0]
+        time_step = x.shape[:2]
         assert self.time_step == time_step
         # of shape (b, t, o, dim)
         x = self.extract_object_feature(x, rois)
