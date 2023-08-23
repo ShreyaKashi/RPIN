@@ -63,15 +63,17 @@ class Trainer(object):
             labels_tensor = to_device(labels_tensor)
             data_pc_bind_tensor = to_device(data_pc_bind_tensor)
 
-            print('data_pc_ind_tensor',data_pc_ind_tensor.shape)
-            print('data_pc_ind_help_tensor',data_pc_ind_help_tensor.shape)
-            print('data_pc_find_tensor',data_pc_find_tensor.shape)
-            print('data_pc_bind_tensor',data_pc_bind_tensor.shape)
-            print('gt_center3d_real_tensor',gt_center3d_real_tensor.shape)
+            # print('data_pc_ind_tensor',data_pc_ind_tensor.shape)
+            # print('data_pc_ind_help_tensor',data_pc_ind_help_tensor.shape)
+            # print('data_pc_ind_help_tensor',data_pc_ind_help_tensor)
+            # print('data_pc_find_tensor',data_pc_find_tensor.shape)
+            # print('data_pc_bind_tensor',data_pc_bind_tensor.shape)
+            # print('gt_center3d_real_tensor',gt_center3d_real_tensor.shape)
+            print(' ')
             # rois = xyxy_to_rois(rois, batch=data.shape[0], time_step=data.shape[1], num_devices=self.num_gpus)
             self.optim.zero_grad()
 
-            outputs = self.model(features, pointclouds, edges_self, edges_forward, data_pc_ind_tensor, data_pc_find_tensor, data_pc_bind_tensor, num_rollouts=self.ptrain_size, g_idx=g_idx_tensor, phase='train')
+            outputs = self.model(features, pointclouds, edges_self, edges_forward, data_pc_ind_tensor, data_pc_ind_help_tensor, data_pc_find_tensor, data_pc_bind_tensor, num_rollouts=self.ptrain_size, g_idx=g_idx_tensor, phase='train')
             labels = {
                 'boxes': gt_boxes.to(self.device),
                 'masks': gt_masks.to(self.device),

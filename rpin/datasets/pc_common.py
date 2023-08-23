@@ -244,6 +244,60 @@ def tensorize(
     return features, pointclouds, edges_self, edges_forward
 
 
+
+def FrameToVideo(
+        features,
+        pointclouds,
+        edges_self,
+        edges_forward,
+        ):
+    """
+    ListToBatch transforms a batch of multiple clouds into one point cloud so that we do not have to pad them to the same length
+    The way this works is that all point clouds are concatenated one after another e.g., if you have point cloud 1 which is [5154,3], point cloud 2 which is [4749, 3]
+    then it creates a point cloud as if it has batch size 1, which is a tensor of shape [1, 5154+4749, 3]
+    It also modifies the edges (indices of k-nearest-neighbors) so that they point to the correct points
+    For example, for point cloud 2, we add 5154 to all its neighbor indices so that they
+    link to the points in point cloud 2 in this combined tensor
+    Input: List versions of all the input
+    Output: Batched versions of all the input
+    """
+    # import ipdb; ipdb.set_trace()
+    num_sample = len(pointclouds)
+
+    # process sample 0
+    featureBatch = features[0]
+    pointcloudsBatch = pointclouds[0]
+
+    edgesSelfBatch = edges_self[0]
+    edgesForwardBatch = edges_forward[0]
+
+    points_stored = [val.shape[0] for val in pointcloudsBatch]
+    for i in range(1, num_sample):
+        featureBatch = np.concatenate([featureBatch, features[i]], 0)
+
+        for j in range(len(edges_forward[i])):
+            tempMask = edges_forward[i][j] == -1
+            edges_forwardAdd = edges_forward[i][j] + points_stored[j]
+            edges_forwardAdd[tempMask] = -1
+            edgesForwardBatch[j] = np.concatenate([edgesForwardBatch[j],
+                                                   edges_forwardAdd], 0)
+
+        for j in range(len(pointclouds[i])):
+            tempMask3 = edges_self[i][j] == -1
+            edges_selfAdd = edges_self[i][j] + points_stored[j]
+            edges_selfAdd[tempMask3] = -1
+            edgesSelfBatch[j] = np.concatenate([edgesSelfBatch[j],
+                                                edges_selfAdd], 0)
+
+            pointcloudsBatch[j] = np.concatenate(
+                [pointcloudsBatch[j], pointclouds[i][j]], 0)
+
+            points_stored[j] += pointclouds[i][j].shape[0]
+
+    return featureBatch, pointcloudsBatch, edgesSelfBatch, edgesForwardBatch
+
+
+
 def listToBatch(
         features,
         pointclouds,

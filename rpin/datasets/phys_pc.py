@@ -8,7 +8,7 @@ from copy import deepcopy
 
 from rpin.utils.config import _C as C
 from rpin.utils.bbox import xyxy2xywh
-from rpin.datasets.pc_common import subsample_and_knn
+from rpin.datasets.pc_common import subsample_and_knn, FrameToVideo
 import yaml
 
 plot = False
@@ -64,6 +64,7 @@ class Phys_pc(Dataset):
 
         coord = data_pc_rgbd[:, :3]
         point_color = data_pc_rgbd[:, 3:]
+        # print('point_color',point_color.shape)
         norm = None
 
         z_min = coord[:, 2].min()
@@ -81,14 +82,17 @@ class Phys_pc(Dataset):
                 g_idx.append([i, j, (i < num_objs) * (j < num_objs)])
         g_idx = np.array(g_idx)
 
-        point_list_all, nei_forward_list_all, nei_propagate_list_all, nei_self_list_all, norm_list_all = [] ,[] ,[] ,[] ,[]
+        features_list_all, point_list_all, nei_self_list_all, nei_forward_list_all= [] ,[] ,[] ,[]
         for i in range(data_pc_find.shape[0]-1):
             # print("i",i)
             # print('coord[data_pc_find[i]:data_pc_find[i+1],:]',coord[data_pc_find[i]:data_pc_find[i+1],:].shape)
             point_list, nei_forward_list, nei_propagate_list, nei_self_list, norm_list = \
                 subsample_and_knn(coord[data_pc_find[i]:data_pc_find[i+1],:], norm, grid_size=self.subsample_and_knn_cfg["grid_size"], K_self=self.subsample_and_knn_cfg["K_self"],
                               K_forward=self.subsample_and_knn_cfg["K_forward"], K_propagate=self.subsample_and_knn_cfg["K_propagate"])
+            
+            features_list = point_color[data_pc_find[i]:data_pc_find[i+1],:]
             # print('point_list',len(point_list))
+            # print('point_list',point_list)
             # print('nei_forward_list',len(nei_forward_list))
             # print('nei_self_list',len(nei_self_list))
             # point_list_all.append(point_list)
@@ -96,9 +100,70 @@ class Phys_pc(Dataset):
             # # nei_propagate_list_all.append(nei_propagate_list)
             # nei_self_list_all.append(nei_self_list)
             # norm_list_all.append(norm_list)
-            point_list_all += point_list
-            nei_forward_list_all +=  nei_forward_list
-            nei_self_list_all += nei_self_list
+
+            # point_list_all += point_list
+            # # print('point_list',point_list)
+            # print('len(point_list)',len(point_list))
+            # print('point_list[0]',point_list[0].shape)
+            # nei_forward_list_all +=  nei_forward_list
+            # # print('nei_self_list',nei_self_list)
+            # print('len(nei_forward_list_all)',len(nei_forward_list_all))
+            # print('nei_forward_list_all[0]',nei_forward_list_all[0].shape)
+            # nei_self_list_all += nei_self_list
+            # # print('nei_self_list',nei_self_list)
+            # print('len(nei_self_list_all)',len(nei_self_list_all))
+            # print('nei_self_list_all[0]',nei_self_list_all[0].shape)
+
+            features_list_all.append(features_list)
+            point_list_all.append(point_list)
+            nei_forward_list_all.append(nei_forward_list)
+            nei_self_list_all.append(nei_self_list)
+        # print('point_list',len(point_list_all))
+        # print('point_list_all[0].shape',point_list_all[0].shape)
+        # print('nei_forward_list_all[0].shape',nei_forward_list_all[0].shape)
+        # print('nei_self_list_all[0].shape',nei_self_list_all[0].shape)
+        # print('len(point_list_all[0])',len(point_list_all[0]))
+        features_np, point_np_list, nei_self_np_list, nei_forward_np_list = FrameToVideo(features_list_all, point_list_all, nei_self_list_all, nei_forward_list_all)
+        # print('features_np_all',features_np)
+        # print('features_np_all.shape',features_np.shape)
+        # print('point_np_all.shape', len(point_np_list))
+        # print('nei_self_np_all.shape',len(nei_self_np_list))
+        # print('nei_forward_np_all.shape',len(nei_forward_np_list))
+        # assert 1 == 2
+
+        # point_list_all_new = []
+        # nei_forward_list_all_new = []
+        # nei_self_list_all_new = []
+        # print('point_list_all',len(point_list_all))
+        # print('nei_forward_list_all',len(nei_forward_list_all))
+        # print('nei_self_list_all',len(nei_self_list_all))
+
+        # grid_size=len(self.subsample_and_knn_cfg["grid_size"])
+        # for i in range(grid_size):
+        #     point_list_temp = []
+        #     nei_forward_list_temp = []
+        #     nei_self_list_temp = []
+        #     # print('i',i)
+        #     for j in range(data_pc_find.shape[0]-1):
+        #         # print('j',j)
+        #         # print('i+grid_size*j',i+grid_size*j)
+        #         # print('i+(grid_size-1)*j',i+(grid_size-1)*j)
+        #         # print(" ")
+        #         point_list_temp.append(point_list_all[i+grid_size*j])
+        #         if i < grid_size - 1:
+        #             nei_forward_list_temp.append(nei_forward_list_all[i+(grid_size-1)*j])
+        #         nei_self_list_temp.append(nei_self_list_all[i+grid_size*j])
+        #     point_np_temp = np.concatenate(point_list_temp, 0)
+        #     if i < grid_size - 1:
+        #         nei_forward_np_temp = np.concatenate(nei_forward_list_temp, 0)
+        #     nei_self_np_temp = np.concatenate(nei_self_list_temp, 0)
+
+        #     point_list_all_new.append(point_np_temp)
+        #     if i < grid_size - 1:
+        #         nei_forward_list_all_new.append(nei_forward_np_temp)
+        #     nei_self_list_all_new.append(nei_self_np_temp)
+
+        # print('nei_forward_list_all_new',len(nei_forward_list_all_new))
 
         # gt 3dcenter real
         gt_center3d_real=center3d_real[self.input_size:].copy()
@@ -108,11 +173,11 @@ class Phys_pc(Dataset):
         gt_center3d_real = torch.from_numpy(gt_center3d_real.astype(np.float32))
 
         all_data['label_list'] = labels
-        all_data['feature_list'] = [point_color]
-        all_data['point_list'] = point_list_all
-        all_data['nei_forward_list'] = nei_forward_list_all
+        all_data['feature_list'] = [features_np]
+        all_data['point_list'] = point_np_list
+        all_data['nei_forward_list'] = nei_forward_np_list
         # all_data['nei_propagate_list'] = nei_propagate_list_all
-        all_data['nei_self_list'] = nei_self_list_all
+        all_data['nei_self_list'] = nei_self_np_list
         # all_data['surface_normal_list'] = norm_list
 
         all_data['data_pc_ind'] = data_pc_ind

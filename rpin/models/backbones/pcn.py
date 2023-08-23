@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from easydict import EasyDict
-from pcn_layers import PointConv, PointConvStridePE, PointConvTransposePE, PointTransformerLayer, PCFLayer, Linear_BN
+from rpin.models.backbones.pcn_layers import PointConv, PointConvStridePE, PointConvTransposePE, PointTransformerLayer, PCFLayer, Linear_BN
 
 
 def get_default_configs(cfg, num_level=5, base_dim=64):
@@ -24,7 +24,8 @@ def get_default_configs(cfg, num_level=5, base_dim=64):
     # Whether to use the viewpoint-invariant coordinate transforms
     # (Xingyi Li et al. Improving the Robustness of Point Convolution on K-Nearest Neighbor Neighborhoods with a Viewpoint-Invariant Coordinate Transform. WACV 2023)
     if 'USE_VI' not in cfg.keys():
-        cfg.USE_VI = True
+        # cfg.USE_VI = True
+        cfg.USE_VI = False #change by mingqi
     # Whether to concatenate positional encoding into features for VI_PointConv, improves performance at the cost of more GPU memory
     if 'USE_PE' not in cfg.keys():
         cfg.USE_PE = False
@@ -172,7 +173,7 @@ class PCF_Backbone(nn.Module):
                                     out_ch, out_ch, cfg.num_heads))
                 self.pointconv_res.append(res_blocks)
 
-    def forward(self, features, pointclouds, edges_self, edges_forward, norms):
+    def forward(self, features, pointclouds, edges_self, edges_forward, norms=None):
         # encode pointwise info
         pointwise_feat = torch.cat(
             [features, pointclouds[0]], -1) if self.cfg.USE_XYZ else features
@@ -181,11 +182,11 @@ class PCF_Backbone(nn.Module):
         # but have relatively small use on 2cm
         if self.cfg.use_level_1:
             pointwise_feat, vi_features = self.selfpointconv(
-                pointclouds[0], pointwise_feat, edges_self[0], norms[0])
+                pointclouds[0], pointwise_feat, edges_self[0], norms)
             pointwise_feat, _ = self.selfpointconv_res1(
-                pointclouds[0], pointwise_feat, edges_self[0], norms[0], vi_features=vi_features)
+                pointclouds[0], pointwise_feat, edges_self[0], norms, vi_features=vi_features)
             pointwise_feat, _ = self.selfpointconv_res2(
-                pointclouds[0], pointwise_feat, edges_self[0], norms[0], vi_features=vi_features)
+                pointclouds[0], pointwise_feat, edges_self[0], norms, vi_features=vi_features)
         else:
             # if don't use level 1 convs, then just simply do a linear layer to
             # increase the feature dimensionality
@@ -198,7 +199,7 @@ class PCF_Backbone(nn.Module):
                     pointclouds[i], feat_list[-1], edges_forward[i], pointclouds[i + 1])
             else:
                 sparse_feat, _ = pointconv(
-                    pointclouds[i], feat_list[-1], edges_forward[i], norms[i], pointclouds[i + 1], norms[i + 1])
+                    pointclouds[i], feat_list[-1], edges_forward[i], norms, pointclouds[i + 1], norms)
             # print(sparse_feat.shape)
             # There is the need to recompute VI features from the neighbors at this level rather than from the previous level, hence need
             # to recompute VI features in the first residual block
@@ -210,10 +211,10 @@ class PCF_Backbone(nn.Module):
                 else:
                     if vi_features is not None:
                         sparse_feat, _ = res_block(
-                            pointclouds[i + 1], sparse_feat, edges_self[i + 1], norms[i + 1], vi_features=vi_features)
+                            pointclouds[i + 1], sparse_feat, edges_self[i + 1], norms, vi_features=vi_features)
                     else:
                         sparse_feat, vi_features = res_block(
-                            pointclouds[i + 1], sparse_feat, edges_self[i + 1], norms[i + 1])
+                            pointclouds[i + 1], sparse_feat, edges_self[i + 1], norms)
 
             feat_list.append(sparse_feat)
 

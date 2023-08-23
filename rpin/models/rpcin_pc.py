@@ -6,11 +6,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision.ops.roi_align import RoIAlign
+import yaml
+from easydict import EasyDict as edict
 
 from rpin.utils.config import _C as C
 from rpin.models.layers.CIN import InterNet
-from rpin.models.backbones.build import build_backbone
-
+from rpin.models.backbones.build import build_backbone, build_pc_backbone
+from rpin.models.backbones.pcn import get_default_configs
 
 class Net(nn.Module):
     def __init__(self):
@@ -25,6 +27,13 @@ class Net(nn.Module):
 
         # build image encoder
         # self.backbone = build_backbone(C.RPIN.BACKBONE, self.ve_feat_dim, C.INPUT.IMAGE_CHANNEL)
+        # build point cloud encoder
+        pc_backbon_cfg = edict(yaml.safe_load(open(C.RPIN.PCF_ARGS, 'r')))
+        pc_backbon_cfg = get_default_configs(pc_backbon_cfg)
+        # pc_backbon_cfg.pretrain_path = args.pretrain_path
+        # pc_backbon_cfg.config = args.config
+        # pc_backbon_cfg.split = args.split
+        self.backbone = build_pc_backbone(pc_backbon_cfg)
 
         # extract object feature -> convert to object state
         pool_size = C.RPIN.ROI_POOL_SIZE
@@ -92,15 +101,17 @@ class Net(nn.Module):
                 nn.Sigmoid()
             )
 
-    def forward(self, features, pointclouds, edges_self, edges_forward, data_pc_ind_tensor, data_pc_find_tensor, data_pc_bind_tensor, num_rollouts=10, g_idx=None, x_t=None, phase='train'):
-        self.num_objs = rois.shape[2]
+    def forward(self, features, pointclouds, edges_self, edges_forward, data_pc_ind_tensor, data_pc_ind_help_tensor, data_pc_find_tensor, data_pc_bind_tensor, num_rollouts=10, g_idx=None, x_t=None, phase='train'):
+        # self.num_objs = rois.shape[2]
         # x: (b, t, c, h, w)
         # reshape time to batch dimension
-        batch_size = data_pc_bind_tensor.shape[0]
-        time_step = x.shape[:2]
+        num_objs = data_pc_ind_help_tensor[1:] - data_pc_ind_help_tensor[:-1] -1
+        batch_size = data_pc_find_tensor.shape[0]
+        time_step = data_pc_find_tensor.shape[1]-1
         assert self.time_step == time_step
+        # self.num_objs = rois.shape[2]
         # of shape (b, t, o, dim)
-        x = self.extract_object_feature(x, rois)
+        x = self.extract_object_feature(features, pointclouds, edges_self, edges_forward, data_pc_ind_tensor, data_pc_ind_help_tensor, data_pc_find_tensor, data_pc_bind_tensor)
 
         bbox_rollout = []
         mask_rollout = []
@@ -166,15 +177,41 @@ class Net(nn.Module):
         }
         return outputs
 
-    def extract_object_feature(self, pc, pc_ind, pc_find):
+    def extract_object_feature(self, features, pointclouds, edges_self, edges_forward, data_pc_ind_tensor, data_pc_ind_help_tensor, data_pc_find_tensor, data_pc_bind_tensor):
         # visual feature, comes from RoI Pooling
-        batch_size, time_step = pc_find.shape[0], pc_find.shape[1]
+        num_objs = data_pc_ind_help_tensor[1:] - data_pc_ind_help_tensor[:-1] -1
+        batch_size = data_pc_find_tensor.shape[0]
+        time_step = data_pc_find_tensor.shape[1]-1
         
-        x = x.reshape((batch_size * time_step,) + x.shape[2:])  # (b x t, c, h, w)
-        x = self.backbone(x)
-        roi_pool = self.roi_align(x, rois.reshape(-1, 5))  # (b * t * num_objs, feat_dim)
-        roi_pool = self.roi2state(roi_pool)
-        x = roi_pool.reshape((batch_size, time_step, self.num_objs) + (roi_pool.shape[-3:]))
+        # print('features',features)
+        print('features',features.shape)
+        # print('pointclouds',pointclouds)
+        print('pointclouds',len(pointclouds))
+        for i in range(5):
+            print(f'pointclouds[{i}]',pointclouds[i].shape)
+        # print('edges_self',edges_self)
+        print('edges_self',len(edges_self))
+        for i in range(5):
+            print(f'edges_self[{i}]',edges_self[i].shape)
+        # print('edges_forward',edges_forward)
+        print('edges_forward',len(edges_forward))
+        for i in range(4):
+            print(f'edges_forward[{i}]',edges_forward[i].shape)
+        print(" ")
+        # print('data_pc_bind_tensor',data_pc_bind_tensor)
+        # for i in range(batch_size):
+        #     x = self.backbone(features[:,data_pc_bind_tensor[i]:data_pc_bind_tensor[i+1],:], pointclouds[i:i+3], edges_self, edges_forward)
+        x = self.backbone(features, pointclouds, edges_self, edges_forward)
+        print('len(x)',len(x))
+        for i in range(len(x)):
+            print('x',x[i].shape)
+        x_0 = x[0]
+        # x = x.reshape((batch_size * time_step,) + x.shape[2:])  # (b x t, c, h, w)
+        # x = self.backbone(x)
+        # roi_pool = self.roi_align(x, rois.reshape(-1, 5))  # (b * t * num_objs, feat_dim)
+        # roi_pool = self.roi2state(roi_pool)
+        # x = roi_pool.reshape((batch_size, time_step, self.num_objs) + (roi_pool.shape[-3:]))
+        assert 1==2
         return x
 
     # def extract_object_feature(self, x, rois):

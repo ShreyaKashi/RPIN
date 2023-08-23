@@ -6,7 +6,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import pcf_cuda
+# import pcf_cuda
 from rpin.models.backbones.pcn_util.cp_batchnorm import CpBatchNorm2d
 
 

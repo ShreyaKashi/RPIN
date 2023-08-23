@@ -237,10 +237,16 @@ class PCFLayer(nn.Module):
         self.drop_path = DropPath(
             cfg.drop_path_rate) if cfg.drop_path_rate > 0. else nn.Identity()
 
+        # if cfg.BATCH_NORM:
+        #     self.mlp_conv = Linear_BN(12, guidance_feat_len)
+        # else:
+        #     self.mlp_conv = nn.Linear(12, guidance_feat_len)
+
+        # change by mingqi
         if cfg.BATCH_NORM:
-            self.mlp_conv = Linear_BN(12, guidance_feat_len)
+            self.mlp_conv = Linear_BN(3, guidance_feat_len)
         else:
-            self.mlp_conv = nn.Linear(12, guidance_feat_len)
+            self.mlp_conv = nn.Linear(3, guidance_feat_len)
 
         # First downscaling mlp
         if in_channel != out_channel // 4:
@@ -338,9 +344,10 @@ class PCFLayer(nn.Module):
             localized_xyz = gathered_xyz - sparse_xyz.unsqueeze(dim=2)
         else:
             localized_xyz = gathered_xyz - dense_xyz.unsqueeze(dim=2)
-        gathered_norm = index_points(dense_xyz_norm, nei_inds)
+        # gathered_norm = index_points(dense_xyz_norm, nei_inds)
 
         if self.cfg.USE_VI is True:
+            gathered_norm = index_points(dense_xyz_norm, nei_inds)
             if vi_features is None:
                 if sparse_xyz is not None:
                     weightNetInput = VI_coordinate_transform(
@@ -650,11 +657,12 @@ class PointConvStridePE(nn.Module):
             localized_xyz = gathered_xyz - sparse_xyz.unsqueeze(dim=2)
         else:
             localized_xyz = gathered_xyz - dense_xyz.unsqueeze(dim=2)
-        gathered_norm = index_points(dense_xyz_norm, nei_inds)
+        # gathered_norm = index_points(dense_xyz_norm, nei_inds)
 
         feat_pe = self.pe_convs(localized_xyz)  # [B, M, K, D]
 
         if self.cfg.USE_VI is True:
+            gathered_norm = index_points(dense_xyz_norm, nei_inds)
             if vi_features is None:
                 if sparse_xyz is not None:
                     weightNetInput = VI_coordinate_transform(
