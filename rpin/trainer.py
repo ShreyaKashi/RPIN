@@ -32,7 +32,7 @@ class Trainer(object):
         self.epochs = 0
         self.max_iters = max_iters
         self.val_interval = C.SOLVER.VAL_INTERVAL
-        self.fg_correct, self.bg_correct, self.fg_num, self.bg_num = 0, 0, 0, 0
+        # self.fg_correct, self.bg_correct, self.fg_num, self.bg_num = 0, 0, 0, 0
         # loss settings
         self._setup_loss()
         # timer setting
@@ -48,39 +48,35 @@ class Trainer(object):
             self.epochs += 1
 
     def train_epoch(self):
-        for batch_idx, (features, pointclouds, edges_self, edges_forward, data_pc_ind_tensor, data_pc_ind_help_tensor, data_pc_find_tensor, data_pc_bind_tensor, gt_center3d_real_tensor, g_idx_tensor, labels_tensor) in enumerate(self.train_loader):
+        for batch_idx, (features, pointclouds, edges_self, edges_forward, data_pc_oind, data_pc_oind_help, data_pc_find, data_pc_bind, gt_center3d_world, valid, g_idx, labels) in enumerate(self.train_loader):
                         
             self._adjust_learning_rate()
             features = to_device(features)
             pointclouds = to_device(pointclouds)
             edges_self = to_device(edges_self)
             edges_forward = to_device(edges_forward)
-            data_pc_ind_tensor = to_device(data_pc_ind_tensor)
-            data_pc_ind_help_tensor = to_device(data_pc_ind_help_tensor)
-            data_pc_find_tensor = to_device(data_pc_find_tensor)
-            gt_center3d_real_tensor = to_device(gt_center3d_real_tensor)
-            g_idx_tensor = to_device(g_idx_tensor)
-            labels_tensor = to_device(labels_tensor)
-            data_pc_bind_tensor = to_device(data_pc_bind_tensor)
+            data_pc_oind = to_device(data_pc_oind)
+            data_pc_oind_help = to_device(data_pc_oind_help)
+            data_pc_find = to_device(data_pc_find)
+            data_pc_bind = to_device(data_pc_bind)
+            # labels = to_device(labels)
 
-            # print('data_pc_ind_tensor',data_pc_ind_tensor.shape)
-            # print('data_pc_ind_help_tensor',data_pc_ind_help_tensor.shape)
-            # print('data_pc_ind_help_tensor',data_pc_ind_help_tensor)
-            # print('data_pc_find_tensor',data_pc_find_tensor.shape)
-            # print('data_pc_bind_tensor',data_pc_bind_tensor.shape)
-            # print('gt_center3d_real_tensor',gt_center3d_real_tensor.shape)
-            print(' ')
+            # print('g_idx',g_idx.shape)
+            # print('data_pc_oind',data_pc_oind.shape)
+            # print('data_pc_oind_help',data_pc_oind_help.shape)
+            # print('data_pc_oind_help',data_pc_oind_help)
+            # print('data_pc_find',data_pc_find.shape)
+            # print('data_pc_bind',data_pc_bind.shape)
+            # print('gt_center3d_world',gt_center3d_world.shape)
+            # print(' ')
             # rois = xyxy_to_rois(rois, batch=data.shape[0], time_step=data.shape[1], num_devices=self.num_gpus)
             self.optim.zero_grad()
-
-            outputs = self.model(features, pointclouds, edges_self, edges_forward, data_pc_ind_tensor, data_pc_ind_help_tensor, data_pc_find_tensor, data_pc_bind_tensor, num_rollouts=self.ptrain_size, g_idx=g_idx_tensor, phase='train')
+            gt_center3d_world = to_device(gt_center3d_world)
+            g_idx = to_device(g_idx)
+            outputs = self.model(features, pointclouds, edges_self, edges_forward, data_pc_oind, data_pc_oind_help, data_pc_find, data_pc_bind, num_rollouts=self.ptrain_size, g_idx=g_idx, phase='train')
             labels = {
-                'boxes': gt_boxes.to(self.device),
-                'masks': gt_masks.to(self.device),
-                'center3d_2d': gt_center3d_2d.to(self.device),
-                'center3d_2d_offset': gt_center3d_2d_offset.to(self.device),
-                'valid': valid.to(self.device),
-                'seq_l': seq_l.to(self.device),
+                'gt_center3d_world': to_device(gt_center3d_world) if self.device == torch.device('cuda') else gt_center3d_world,
+                'valid': to_device(valid) if self.device == torch.device('cuda') else gt_center3d_world,
             }
             loss = self.loss(outputs, labels, 'train')
             loss.backward()
@@ -109,12 +105,12 @@ class Trainer(object):
             print_msg = ""
             print_msg += f"{self.epochs:03}/{self.iterations // 1000:04}k"
             print_msg += f" | "
-            mean_loss = np.mean(np.array(self.box_p_step_losses[:self.ptrain_size]) / self.loss_cnt) * 1e3
+            mean_loss = np.mean(np.array(self.center3d_world_step_losses[:self.ptrain_size]) / self.loss_cnt) * 1e3
             print_msg += f"{mean_loss:.3f} | "
             print_msg += f" | ".join(
                 ["{:.3f}".format(self.losses[name] * 1e3 / self.loss_cnt) for name in self.loss_name])
-            if C.RPIN.SEQ_CLS_LOSS_WEIGHT:
-                print_msg += f" | {self.fg_correct / self.fg_num:.3f} | {self.bg_correct / self.bg_num:.3f}"
+            # if C.RPIN.SEQ_CLS_LOSS_WEIGHT:
+            #     print_msg += f" | {self.fg_correct / self.fg_num:.3f} | {self.bg_correct / self.bg_num:.3f}"
             speed = self.loss_cnt / (timer() - self.time)
             eta = (self.max_iters - self.iterations) / speed / 3600
             print_msg += f" | speed: {speed:.1f} | eta: {eta:.2f} h"
@@ -136,61 +132,32 @@ class Trainer(object):
         self.model.eval()
         self._init_loss()
 
-        if C.RPIN.VAE:
-            losses = dict.fromkeys(self.loss_name, 0.0)
-            box_p_step_losses = [0.0 for _ in range(self.ptest_size)]
-            masks_step_losses = [0.0 for _ in range(self.ptest_size)]
-
-        for batch_idx, (data, _, rois, gt_boxes, gt_masks, gt_center3d_2d, gt_center3d_2d_offset, valid, g_idx, seq_l) in enumerate(self.val_loader):
+        for batch_idx, (features, pointclouds, edges_self, edges_forward, data_pc_oind, data_pc_oind_help, data_pc_find, data_pc_bind, gt_center3d_world, valid, g_idx, labels) in enumerate(self.val_loader):
             tprint(f'eval: {batch_idx}/{len(self.val_loader)}')
             with torch.no_grad():
 
-                data = data.to(self.device)
-                rois = xyxy_to_rois(rois, batch=data.shape[0], time_step=data.shape[1], num_devices=self.num_gpus)
+                features = to_device(features)
+                pointclouds = to_device(pointclouds)
+                edges_self = to_device(edges_self)
+                edges_forward = to_device(edges_forward)
+                data_pc_oind = to_device(data_pc_oind)
+                data_pc_oind_help = to_device(data_pc_oind_help)
+                data_pc_find = to_device(data_pc_find)
+                data_pc_bind = to_device(data_pc_bind)
+
                 labels = {
-                    'boxes': gt_boxes.to(self.device),
-                    'masks': gt_masks.to(self.device),
-                    'center3d_2d': gt_center3d_2d.to(self.device),
-                    'center3d_2d_offset': gt_center3d_2d_offset.to(self.device),
-                    'valid': valid.to(self.device),
-                    'seq_l': seq_l.to(self.device),
+                'gt_center3d_world': to_device(gt_center3d_world) if self.device == torch.device('cuda') else gt_center3d_world,
+                'valid': to_device(valid) if self.device == torch.device('cuda') else gt_center3d_world,
                 }
 
-                outputs = self.model(data, rois, num_rollouts=self.ptest_size, g_idx=g_idx, phase='test')
+                outputs = self.model(features, pointclouds, edges_self, edges_forward, data_pc_oind, data_pc_oind_help, data_pc_find, data_pc_bind, num_rollouts=self.ptrain_size, g_idx=g_idx, phase='test')
                 self.loss(outputs, labels, 'test')
-                # VAE multiple runs
-                if C.RPIN.VAE:
-                    vae_best_mean = np.mean(np.array(self.box_p_step_losses[:self.ptest_size]) / self.loss_cnt) * 1e3
-                    losses_t = self.losses.copy()
-                    box_p_step_losses_t = self.box_p_step_losses.copy()
-                    masks_step_losses_t = self.masks_step_losses.copy()
-                    for i in range(9):
-                        outputs = self.model(data, rois, num_rollouts=self.ptest_size, g_idx=g_idx, phase='test')
-                        self.loss(outputs, labels, 'test')
-                        mean_loss = np.mean(np.array(self.box_p_step_losses[:self.ptest_size]) / self.loss_cnt) * 1e3
-                        if mean_loss < vae_best_mean:
-                            losses_t = self.losses.copy()
-                            box_p_step_losses_t = self.box_p_step_losses.copy()
-                            masks_step_losses_t = self.masks_step_losses.copy()
-                            vae_best_mean = mean_loss
-                        self._init_loss()
-
-                    for k, v in losses.items():
-                        losses[k] += losses_t[k]
-                    for i in range(len(box_p_step_losses)):
-                        box_p_step_losses[i] += box_p_step_losses_t[i]
-                        masks_step_losses[i] += masks_step_losses_t[i]
-
-        if C.RPIN.VAE:
-            self.losses = losses.copy()
-            self.box_p_step_losses = box_p_step_losses.copy()
-            self.loss_cnt = len(self.val_loader)
 
         print('\r', end='')
         print_msg = ""
         print_msg += f"{self.epochs:03}/{self.iterations // 1000:04}k"
         print_msg += f" | "
-        mean_loss = np.mean(np.array(self.box_p_step_losses[:self.ptest_size]) / self.loss_cnt) * 1e3
+        mean_loss = np.mean(np.array(self.center3d_world_step_losses[:self.ptest_size]) / self.loss_cnt) * 1e3
         print_msg += f"{mean_loss:.3f} | "
 
         if mean_loss < self.best_mean:
@@ -198,136 +165,148 @@ class Trainer(object):
             self.best_mean = mean_loss
 
         print_msg += f" | ".join(["{:.3f}".format(self.losses[name] * 1e3 / self.loss_cnt) for name in self.loss_name])
-        if C.RPIN.SEQ_CLS_LOSS_WEIGHT:
-            print_msg += f" | {self.fg_correct / (self.fg_num + 1e-9):.3f} | {self.bg_correct / (self.bg_num + 1e-9):.3f}"
+        # if C.RPIN.SEQ_CLS_LOSS_WEIGHT:
+        #     print_msg += f" | {self.fg_correct / (self.fg_num + 1e-9):.3f} | {self.bg_correct / (self.bg_num + 1e-9):.3f}"
         print_msg += (" " * (os.get_terminal_size().columns - len(print_msg) - 10))
         self.logger.info(print_msg)
 
     def loss(self, outputs, labels, phase):
-        self.loss_cnt += labels['boxes'].shape[0]
+        self.loss_cnt += labels['gt_center3d_world'].shape[0]
         pred_size = eval(f'self.p{phase}_size')
         # calculate bbox loss
         # of shape (batch, time, #obj, 4)
-        loss = (outputs['boxes'] - labels['boxes']) ** 2
+        loss = (outputs['center3d_world'] - labels['gt_center3d_world']) ** 2
+        # print('loss',loss.shape)
         # take weighted sum over axis 2 (objs dim) since some index are not valid
         valid = labels['valid'][:, None, :, None]
         loss = loss * valid
+        # print('loss',loss.shape)
         loss = loss.sum(2) / valid.sum(2)
+        # print('loss',loss.shape)
         loss *= self.position_loss_weight
+        # print('loss',loss.shape)
+        # assert 1==2
 
         for i in range(pred_size):
-            self.box_p_step_losses[i] += loss[:, i, :2].sum().item()
-            self.box_s_step_losses[i] += loss[:, i, 2:].sum().item()
+            self.center3d_world_step_losses[i] += loss[:, i, :].sum().item()
 
-        self.losses['p_1'] = float(np.mean(self.box_p_step_losses[:self.ptrain_size]))
-        self.losses['p_2'] = float(np.mean(self.box_p_step_losses[self.ptrain_size:])) \
-            if self.ptrain_size < self.ptest_size else 0
-        self.losses['s_1'] = float(np.mean(self.box_s_step_losses[:self.ptrain_size]))
-        self.losses['s_2'] = float(np.mean(self.box_s_step_losses[self.ptrain_size:])) \
+        self.losses['p_1'] = float(np.mean(self.center3d_world_step_losses[:self.ptrain_size]))
+        self.losses['p_2'] = float(np.mean(self.center3d_world_step_losses[self.ptrain_size:])) \
             if self.ptrain_size < self.ptest_size else 0
 
-        mask_loss = 0
-        if C.RPIN.MASK_LOSS_WEIGHT > 0:
-            # of shape (batch, time, #obj, m_sz, m_sz)
-            mask_loss_ = F.binary_cross_entropy(outputs['masks'], labels['masks'], reduction='none')
-            mask_loss = mask_loss_.mean((3, 4))
-            valid = labels['valid'][:, None, :]
-            mask_loss = mask_loss * valid
-            mask_loss = mask_loss.sum(2) / valid.sum(2)
+        # for i in range(pred_size):
+        #     self.box_p_step_losses[i] += loss[:, i, :2].sum().item()
+        #     self.box_s_step_losses[i] += loss[:, i, 2:].sum().item()
 
-            for i in range(pred_size):
-                self.masks_step_losses[i] += mask_loss[:, i].sum().item()
+        # self.losses['p_1'] = float(np.mean(self.box_p_step_losses[:self.ptrain_size]))
+        # self.losses['p_2'] = float(np.mean(self.box_p_step_losses[self.ptrain_size:])) \
+        #     if self.ptrain_size < self.ptest_size else 0
+        # self.losses['s_1'] = float(np.mean(self.box_s_step_losses[:self.ptrain_size]))
+        # self.losses['s_2'] = float(np.mean(self.box_s_step_losses[self.ptrain_size:])) \
+        #     if self.ptrain_size < self.ptest_size else 0
 
-            m1_loss = self.masks_step_losses[:self.ptrain_size]
-            m2_loss = self.masks_step_losses[self.ptrain_size:]
-            self.losses['m_1'] = np.mean(m1_loss)
-            self.losses['m_2'] = np.mean(m2_loss) if self.ptrain_size < self.ptest_size else 0
+        # mask_loss = 0
+        # if C.RPIN.MASK_LOSS_WEIGHT > 0:
+        #     # of shape (batch, time, #obj, m_sz, m_sz)
+        #     mask_loss_ = F.binary_cross_entropy(outputs['masks'], labels['masks'], reduction='none')
+        #     mask_loss = mask_loss_.mean((3, 4))
+        #     valid = labels['valid'][:, None, :]
+        #     mask_loss = mask_loss * valid
+        #     mask_loss = mask_loss.sum(2) / valid.sum(2)
 
-            mask_loss = mask_loss.mean(0)
-            init_tau = C.RPIN.DISCOUNT_TAU ** (1 / self.ptrain_size)
-            tau = init_tau + (self.iterations / self.max_iters) * (1 - init_tau)
-            tau = torch.pow(tau, torch.arange(pred_size, out=torch.FloatTensor()))[:, None].to('cuda')
-            mask_loss = ((mask_loss * tau) / tau.sum(axis=0, keepdims=True)).sum()
-            mask_loss = mask_loss * C.RPIN.MASK_LOSS_WEIGHT
+        #     for i in range(pred_size):
+        #         self.masks_step_losses[i] += mask_loss[:, i].sum().item()
 
-        seq_loss = 0
-        if C.RPIN.SEQ_CLS_LOSS_WEIGHT > 0:
-            seq_loss = F.binary_cross_entropy(outputs['score'], labels['seq_l'], reduction='none')
-            self.losses['seq'] += seq_loss.sum().item()
-            seq_loss = seq_loss.mean() * C.RPIN.SEQ_CLS_LOSS_WEIGHT
-            # calculate accuracy
-            s = (outputs['score'] >= 0.5).eq(labels['seq_l'])
-            fg_correct = s[labels['seq_l'] == 1].sum().item()
-            bg_correct = s[labels['seq_l'] == 0].sum().item()
-            fg_num = (labels['seq_l'] == 1).sum().item()
-            bg_num = (labels['seq_l'] == 0).sum().item()
-            self.fg_correct += fg_correct
-            self.bg_correct += bg_correct
-            self.fg_num += fg_num
-            self.bg_num += bg_num
+        #     m1_loss = self.masks_step_losses[:self.ptrain_size]
+        #     m2_loss = self.masks_step_losses[self.ptrain_size:]
+        #     self.losses['m_1'] = np.mean(m1_loss)
+        #     self.losses['m_2'] = np.mean(m2_loss) if self.ptrain_size < self.ptest_size else 0
 
-        kl_loss = 0
-        if C.RPIN.VAE and phase == 'train':
-            kl_loss = outputs['kl']
-            self.losses['kl'] += kl_loss.sum().item()
-            kl_loss = C.RPIN.VAE_KL_LOSS_WEIGHT * kl_loss.sum()
+        #     mask_loss = mask_loss.mean(0)
+        #     init_tau = C.RPIN.DISCOUNT_TAU ** (1 / self.ptrain_size)
+        #     tau = init_tau + (self.iterations / self.max_iters) * (1 - init_tau)
+        #     tau = torch.pow(tau, torch.arange(pred_size, out=torch.FloatTensor()))[:, None].to('cuda')
+        #     mask_loss = ((mask_loss * tau) / tau.sum(axis=0, keepdims=True)).sum()
+        #     mask_loss = mask_loss * C.RPIN.MASK_LOSS_WEIGHT
 
-        center3d_2d_offset_loss = 0
-        if C.RPIN.CENTER3D_2D_OFFSET_LOSS_WEIGHT > 0:
-            center3d_2d_offset_loss=(outputs['center3d_2d_offset'] - labels['center3d_2d_offset'][...,:2]) ** 2
-            valid = labels['valid'][:, None, :, None]
-            center3d_2d_offset_loss = center3d_2d_offset_loss * valid
-            center3d_2d_offset_loss = center3d_2d_offset_loss.sum(2) / valid.sum(2)
+        # seq_loss = 0
+        # if C.RPIN.SEQ_CLS_LOSS_WEIGHT > 0:
+        #     seq_loss = F.binary_cross_entropy(outputs['score'], labels['seq_l'], reduction='none')
+        #     self.losses['seq'] += seq_loss.sum().item()
+        #     seq_loss = seq_loss.mean() * C.RPIN.SEQ_CLS_LOSS_WEIGHT
+        #     # calculate accuracy
+        #     s = (outputs['score'] >= 0.5).eq(labels['seq_l'])
+        #     fg_correct = s[labels['seq_l'] == 1].sum().item()
+        #     bg_correct = s[labels['seq_l'] == 0].sum().item()
+        #     fg_num = (labels['seq_l'] == 1).sum().item()
+        #     bg_num = (labels['seq_l'] == 0).sum().item()
+        #     self.fg_correct += fg_correct
+        #     self.bg_correct += bg_correct
+        #     self.fg_num += fg_num
+        #     self.bg_num += bg_num
 
-            for i in range(pred_size):
-                self.center3d_2d_o_step_losses[i] += center3d_2d_offset_loss[:, i, :].sum().item()
+        # kl_loss = 0
+        # if C.RPIN.VAE and phase == 'train':
+        #     kl_loss = outputs['kl']
+        #     self.losses['kl'] += kl_loss.sum().item()
+        #     kl_loss = C.RPIN.VAE_KL_LOSS_WEIGHT * kl_loss.sum()
 
-            self.losses['3d2d_o1'] = float(np.mean(self.center3d_2d_o_step_losses[:self.ptrain_size]))
-            self.losses['3d2d_o2'] = float(np.mean(self.center3d_2d_o_step_losses[self.ptrain_size:])) \
-                if self.ptrain_size < self.ptest_size else 0
+        # center3d_2d_offset_loss = 0
+        # if C.RPIN.CENTER3D_2D_OFFSET_LOSS_WEIGHT > 0:
+        #     center3d_2d_offset_loss=(outputs['center3d_2d_offset'] - labels['center3d_2d_offset'][...,:2]) ** 2
+        #     valid = labels['valid'][:, None, :, None]
+        #     center3d_2d_offset_loss = center3d_2d_offset_loss * valid
+        #     center3d_2d_offset_loss = center3d_2d_offset_loss.sum(2) / valid.sum(2)
+
+        #     for i in range(pred_size):
+        #         self.center3d_2d_o_step_losses[i] += center3d_2d_offset_loss[:, i, :].sum().item()
+
+        #     self.losses['3d2d_o1'] = float(np.mean(self.center3d_2d_o_step_losses[:self.ptrain_size]))
+        #     self.losses['3d2d_o2'] = float(np.mean(self.center3d_2d_o_step_losses[self.ptrain_size:])) \
+        #         if self.ptrain_size < self.ptest_size else 0
             
-            center3d_2d_offset_loss = center3d_2d_offset_loss.mean(0)
-            init_tau = C.RPIN.DISCOUNT_TAU ** (1 / self.ptrain_size)
-            tau = init_tau + (self.iterations / self.max_iters) * (1 - init_tau)
-            tau = torch.pow(tau, torch.arange(pred_size, out=torch.FloatTensor()))[:, None].to('cuda')
-            center3d_2d_offset_loss = ((center3d_2d_offset_loss * tau) / tau.sum(axis=0, keepdims=True)).sum()
-            center3d_2d_offset_loss = center3d_2d_offset_loss * self.center3d_2d_offset_loss_weight
+        #     center3d_2d_offset_loss = center3d_2d_offset_loss.mean(0)
+        #     init_tau = C.RPIN.DISCOUNT_TAU ** (1 / self.ptrain_size)
+        #     tau = init_tau + (self.iterations / self.max_iters) * (1 - init_tau)
+        #     tau = torch.pow(tau, torch.arange(pred_size, out=torch.FloatTensor()))[:, None].to('cuda')
+        #     center3d_2d_offset_loss = ((center3d_2d_offset_loss * tau) / tau.sum(axis=0, keepdims=True)).sum()
+        #     center3d_2d_offset_loss = center3d_2d_offset_loss * self.center3d_2d_offset_loss_weight
 
-        center3d_2d_depth_loss = 0
-        if C.RPIN.CENTER3D_2D_DEPTH_LOSS_WEIGHT > 0:
-            center3d_2d_depth_loss=(outputs['center3d_2d_depth'] - labels['center3d_2d_offset'][...,2:]) ** 2
-            valid = labels['valid'][:, None, :, None]
-            center3d_2d_depth_loss = center3d_2d_depth_loss * valid
-            center3d_2d_depth_loss = center3d_2d_depth_loss.sum(2) / valid.sum(2)
+        # center3d_2d_depth_loss = 0
+        # if C.RPIN.CENTER3D_2D_DEPTH_LOSS_WEIGHT > 0:
+        #     center3d_2d_depth_loss=(outputs['center3d_2d_depth'] - labels['center3d_2d_offset'][...,2:]) ** 2
+        #     valid = labels['valid'][:, None, :, None]
+        #     center3d_2d_depth_loss = center3d_2d_depth_loss * valid
+        #     center3d_2d_depth_loss = center3d_2d_depth_loss.sum(2) / valid.sum(2)
 
-            for i in range(pred_size):
-                self.center3d_2d_d_step_losses[i] += center3d_2d_depth_loss[:, i, :].sum().item()
+        #     for i in range(pred_size):
+        #         self.center3d_2d_d_step_losses[i] += center3d_2d_depth_loss[:, i, :].sum().item()
 
-            self.losses['3d2d_d1'] = float(np.mean(self.center3d_2d_d_step_losses[:self.ptrain_size]))
-            self.losses['3d2d_d2'] = float(np.mean(self.center3d_2d_d_step_losses[self.ptrain_size:])) \
-                if self.ptrain_size < self.ptest_size else 0
+        #     self.losses['3d2d_d1'] = float(np.mean(self.center3d_2d_d_step_losses[:self.ptrain_size]))
+        #     self.losses['3d2d_d2'] = float(np.mean(self.center3d_2d_d_step_losses[self.ptrain_size:])) \
+        #         if self.ptrain_size < self.ptest_size else 0
             
-            center3d_2d_depth_loss = center3d_2d_depth_loss.mean(0)
-            init_tau = C.RPIN.DISCOUNT_TAU ** (1 / self.ptrain_size)
-            tau = init_tau + (self.iterations / self.max_iters) * (1 - init_tau)
-            tau = torch.pow(tau, torch.arange(pred_size, out=torch.FloatTensor()))[:, None].to('cuda')
-            center3d_2d_depth_loss = ((center3d_2d_depth_loss * tau) / tau.sum(axis=0, keepdims=True)).sum()
-            center3d_2d_depth_loss = center3d_2d_depth_loss * self.center3d_2d_depth_loss_weight
+        #     center3d_2d_depth_loss = center3d_2d_depth_loss.mean(0)
+        #     init_tau = C.RPIN.DISCOUNT_TAU ** (1 / self.ptrain_size)
+        #     tau = init_tau + (self.iterations / self.max_iters) * (1 - init_tau)
+        #     tau = torch.pow(tau, torch.arange(pred_size, out=torch.FloatTensor()))[:, None].to('cuda')
+        #     center3d_2d_depth_loss = ((center3d_2d_depth_loss * tau) / tau.sum(axis=0, keepdims=True)).sum()
+        #     center3d_2d_depth_loss = center3d_2d_depth_loss * self.center3d_2d_depth_loss_weight
 
 
-        center3d_2d_true_depth_loss = 0
-        if C.RPIN.CENTER3D_2D_INVERSE_DEPTH == True:
-            center3d_2d_true_depth_loss=(1/outputs['center3d_2d_depth'] - 1/labels['center3d_2d_offset'][...,2:]) ** 2
-            valid = labels['valid'][:, None, :, None]
-            center3d_2d_true_depth_loss = center3d_2d_true_depth_loss * valid
-            center3d_2d_true_depth_loss = center3d_2d_true_depth_loss.sum(2) / valid.sum(2)
+        # center3d_2d_true_depth_loss = 0
+        # if C.RPIN.CENTER3D_2D_INVERSE_DEPTH == True:
+        #     center3d_2d_true_depth_loss=(1/outputs['center3d_2d_depth'] - 1/labels['center3d_2d_offset'][...,2:]) ** 2
+        #     valid = labels['valid'][:, None, :, None]
+        #     center3d_2d_true_depth_loss = center3d_2d_true_depth_loss * valid
+        #     center3d_2d_true_depth_loss = center3d_2d_true_depth_loss.sum(2) / valid.sum(2)
 
-            for i in range(pred_size):
-                self.center3d_2d_true_d_step_losses[i] += center3d_2d_true_depth_loss[:, i, :].sum().item()
+        #     for i in range(pred_size):
+        #         self.center3d_2d_true_d_step_losses[i] += center3d_2d_true_depth_loss[:, i, :].sum().item()
 
-            self.losses['true_d1'] = float(np.mean(self.center3d_2d_true_d_step_losses[:self.ptrain_size]))
-            self.losses['true_d2'] = float(np.mean(self.center3d_2d_true_d_step_losses[self.ptrain_size:])) \
-                if self.ptrain_size < self.ptest_size else 0
+        #     self.losses['true_d1'] = float(np.mean(self.center3d_2d_true_d_step_losses[:self.ptrain_size]))
+        #     self.losses['true_d2'] = float(np.mean(self.center3d_2d_true_d_step_losses[self.ptrain_size:])) \
+        #         if self.ptrain_size < self.ptest_size else 0
             
             # center3d_2d_depth_loss = center3d_2d_depth_loss.mean(0)
             # init_tau = C.RPIN.DISCOUNT_TAU ** (1 / self.ptrain_size)
@@ -344,7 +323,7 @@ class Trainer(object):
         tau = torch.pow(tau, torch.arange(pred_size, out=torch.FloatTensor()))[:, None].to('cuda')
         loss = ((loss * tau) / tau.sum(axis=0, keepdims=True)).sum()
         # loss = loss + mask_loss + kl_loss + seq_loss
-        loss = loss + mask_loss + center3d_2d_offset_loss + center3d_2d_depth_loss + kl_loss + seq_loss
+        loss = loss 
 
         return loss
 
@@ -360,33 +339,33 @@ class Trainer(object):
     def _setup_loss(self):
         self.loss_name = []
         self.position_loss_weight = C.RPIN.POSITION_LOSS_WEIGHT
-        self.loss_name += ['p_1', 'p_2', 's_1', 's_2']
-        if C.RPIN.MASK_LOSS_WEIGHT:
-            self.loss_name += ['m_1', 'm_2']
-        if C.RPIN.CENTER3D_2D_OFFSET_LOSS_WEIGHT:
-            self.center3d_2d_offset_loss_weight = C.RPIN.CENTER3D_2D_OFFSET_LOSS_WEIGHT
-            self.loss_name += ['3d2d_o1', '3d2d_o2']
-        if C.RPIN.CENTER3D_2D_DEPTH_LOSS_WEIGHT:
-            self.center3d_2d_depth_loss_weight = C.RPIN.CENTER3D_2D_DEPTH_LOSS_WEIGHT
-            self.loss_name += ['3d2d_d1', '3d2d_d2']
-        if C.RPIN.CENTER3D_2D_INVERSE_DEPTH == True: 
-            self.loss_name += ['true_d1', 'true_d2']
-        if C.RPIN.VAE:
-            self.loss_name += ['kl']
-        if C.RPIN.SEQ_CLS_LOSS_WEIGHT:
-            self.loss_name += ['seq']
+        self.loss_name += ['p_1', 'p_2']
+        # if C.RPIN.MASK_LOSS_WEIGHT:
+        #     self.loss_name += ['m_1', 'm_2']
+        # if C.RPIN.CENTER3D_2D_OFFSET_LOSS_WEIGHT:
+        #     self.center3d_2d_offset_loss_weight = C.RPIN.CENTER3D_2D_OFFSET_LOSS_WEIGHT
+        #     self.loss_name += ['3d2d_o1', '3d2d_o2']
+        # if C.RPIN.CENTER3D_2D_DEPTH_LOSS_WEIGHT:
+        #     self.center3d_2d_depth_loss_weight = C.RPIN.CENTER3D_2D_DEPTH_LOSS_WEIGHT
+        #     self.loss_name += ['3d2d_d1', '3d2d_d2']
+        # if C.RPIN.CENTER3D_2D_INVERSE_DEPTH == True: 
+        #     self.loss_name += ['true_d1', 'true_d2']
+        # if C.RPIN.VAE:
+        #     self.loss_name += ['kl']
+        # if C.RPIN.SEQ_CLS_LOSS_WEIGHT:
+        #     self.loss_name += ['seq']
         self._init_loss()
 
     def _init_loss(self):
         self.losses = dict.fromkeys(self.loss_name, 0.0)
-        self.box_p_step_losses = [0.0 for _ in range(self.ptest_size)]
-        self.box_s_step_losses = [0.0 for _ in range(self.ptest_size)]
-        self.masks_step_losses = [0.0 for _ in range(self.ptest_size)]
-        self.center3d_2d_o_step_losses = [0.0 for _ in range(self.ptest_size)]
-        self.center3d_2d_d_step_losses = [0.0 for _ in range(self.ptest_size)]
-        self.center3d_2d_true_d_step_losses = [0.0 for _ in range(self.ptest_size)]
+        self.center3d_world_step_losses = [0.0 for _ in range(self.ptest_size)]
+        # self.box_s_step_losses = [0.0 for _ in range(self.ptest_size)]
+        # self.masks_step_losses = [0.0 for _ in range(self.ptest_size)]
+        # self.center3d_2d_o_step_losses = [0.0 for _ in range(self.ptest_size)]
+        # self.center3d_2d_d_step_losses = [0.0 for _ in range(self.ptest_size)]
+        # self.center3d_2d_true_d_step_losses = [0.0 for _ in range(self.ptest_size)]
         # an statistics of each validation
-        self.fg_correct, self.bg_correct, self.fg_num, self.bg_num = 0, 0, 0, 0
+        # self.fg_correct, self.bg_correct, self.fg_num, self.bg_num = 0, 0, 0, 0
         self.loss_cnt = 0
         self.time = timer()
 

@@ -46,6 +46,30 @@ class InterNet(nn.Module):
             aggregator.append(nn.ReLU(inplace=True))
         self.aggregator = nn.Sequential(*aggregator)
 
+    # def forward(self, x, g_idx=None):
+    #     s = x
+    #     # of shape (b, o, dim, 7, 7)
+    #     batch_size, num_objs, dim, psz, psz = x.shape
+    #     x1 = x.repeat(1, num_objs - 1, 1, 1, 1)
+    #     i1 = g_idx[..., [0], None, None].repeat(1, 1, dim, psz, psz)
+    #     y1 = torch.gather(x1, 1, i1)
+    #     i2 = g_idx[..., [1], None, None].repeat(1, 1, dim, psz, psz)
+    #     y2 = torch.gather(x1, 1, i2)
+    #     r = torch.cat([y1, y2], dim=2)
+    #     r = r * g_idx[:, :, [2], None, None]
+    #     r = r.reshape(-1, dim * 2, psz, psz)
+    #     r = self.rel_dynamics(r)
+    #     r = r.reshape(batch_size, num_objs, num_objs - 1, dim, psz, psz)
+    #     r = r.sum(dim=2)
+
+    #     x = self.self_dynamics(x.reshape(-1, dim, psz, psz)).reshape(batch_size, num_objs, dim, psz, psz)
+
+    #     pred = x + r
+    #     a = self.affector(pred.reshape(-1, dim, psz, psz)).reshape(batch_size, num_objs, dim, psz, psz)
+    #     a = torch.cat([a, s], 2)
+    #     out = self.aggregator(a.reshape(-1, dim * 2, psz, psz)).reshape(batch_size, num_objs, dim, psz, psz)
+    #     return out
+    
     def forward(self, x, g_idx=None):
         s = x
         # of shape (b, o, dim, 7, 7)

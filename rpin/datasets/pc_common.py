@@ -403,12 +403,13 @@ def collect_fn(data_list):
     edges_self = []
     edges_forward=[]
 
-    data_pc_ind_list = []
-    data_pc_ind_help_list = []
-    data_pc_ind_help_list_help = 0
-    data_pc_ind_help_list.append(data_pc_ind_help_list_help)
+    data_pc_oind_list = []
+    data_pc_oind_help_list = []
+    data_pc_oind_help_list_help = 0
+    data_pc_oind_help_list.append(data_pc_oind_help_list_help)
     data_pc_find_list = []
-    gt_center3d_real_list = []
+    gt_center3d_world_list = []
+    valid_list = []
     g_idx_list = []
     labels_list = []
 
@@ -424,28 +425,31 @@ def collect_fn(data_list):
         # point_nei_propagate_all.append(point_nei_propagate)
         edges_self.append(all_data['nei_self_list'])
 
-        data_pc_ind_list.append(all_data['data_pc_ind'])
-        data_pc_ind_help_list_help += all_data['data_pc_ind'].shape[1]
-        data_pc_ind_help_list.append(data_pc_ind_help_list_help)
+        data_pc_oind_list.append(all_data['data_pc_oind'])
+        data_pc_oind_help_list_help += all_data['data_pc_oind'].shape[1]
+        data_pc_oind_help_list.append(data_pc_oind_help_list_help)
         data_pc_find_list.append(all_data['data_pc_find'][np.newaxis, ...])
-        gt_center3d_real_list.append(all_data['gt_center3d_real'][np.newaxis, ...])
-        g_idx_list.append(all_data['g_idx'])
-        labels_list.append(all_data['label_list'])
+        gt_center3d_world_list.append(all_data['gt_center3d_world'][np.newaxis, ...])
+        valid_list.append(all_data['valid'][np.newaxis, ...])
+        g_idx_list.append(all_data['g_idx'][np.newaxis, ...])
+        labels_list.append(all_data['label_list'][np.newaxis, ...])
 
-        data_pc_bind_list_help += all_data['feature_list'][0].shape[0]
+        # print('all_data["data_pc_find"][0]',all_data["data_pc_find"][0])
+        data_pc_bind_list_help += all_data['data_pc_find'][-1]
         data_pc_bind_list.append(data_pc_bind_list_help)
 
 
     features, pointclouds, edges_self, edges_forward = \
         prepare(features, pointclouds, edges_self, edges_forward)
     
-    data_pc_ind_tensor = torch.from_numpy(np.concatenate(data_pc_ind_list, 1))
-    data_pc_ind_help_tensor = torch.Tensor(data_pc_ind_help_list).long()
+    data_pc_oind_tensor = torch.from_numpy(np.concatenate(data_pc_oind_list, 1))
+    data_pc_oind_help_tensor = torch.Tensor(data_pc_oind_help_list).long()
     data_pc_find_tensor = torch.from_numpy(np.concatenate(data_pc_find_list, 0))
-    gt_center3d_real_tensor = torch.cat(gt_center3d_real_list, 0)
+    gt_center3d_world_tensor = torch.cat(gt_center3d_world_list, 0)
+    valid_tensor = torch.from_numpy(np.concatenate(valid_list, 0))
     g_idx_tensor = torch.from_numpy(np.concatenate(g_idx_list, 0))
     labels_tensor = torch.from_numpy(np.concatenate(labels_list, 0))
     data_pc_bind_tensor = torch.Tensor(data_pc_bind_list).long()
 
     
-    return features, pointclouds, edges_self, edges_forward, data_pc_ind_tensor, data_pc_ind_help_tensor, data_pc_find_tensor, data_pc_bind_tensor, gt_center3d_real_tensor, g_idx_tensor, labels_tensor
+    return features, pointclouds, edges_self, edges_forward, data_pc_oind_tensor, data_pc_oind_help_tensor, data_pc_find_tensor, data_pc_bind_tensor, gt_center3d_world_tensor, valid_tensor, g_idx_tensor, labels_tensor
