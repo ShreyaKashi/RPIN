@@ -26,7 +26,7 @@ def copy_file_with_name(source_path, target_path):
                 new_file_path = os.path.join(target_path, file)
                 shutil.copytree(source_file_path, new_file_path)
             
-source_path =  './after_eval_process_3d_center' 
+source_path =  './after_eval_process_pc' 
 target_train = 'train'
 target_test = 'test'
 

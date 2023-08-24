@@ -240,7 +240,7 @@ class Net(nn.Module):
             feature_b.append(feature_f)
             # print('feature_f.shape',feature_f.shape)
         feature_b=torch.stack(feature_b,0)
-        # print('feature_b.shape',feature_b.shape)
+        print('feature_b.shape',feature_b.shape)
 
-        # assert 1==2
+        assert 1==2
         return feature_b

@@ -11,7 +11,7 @@ class InterNet(nn.Module):
         self.in_feat_dim = in_feat_dim
         # self dynamics, input object state, output new object state
         self_dynamics = [
-            nn.Conv2d(self.in_feat_dim, self.in_feat_dim, kernel_size=3, stride=1, padding=1), nn.ReLU(inplace=True)
+            nn.Conv2d(self.in_feat_dim, self.in_feat_dim, kernel_size=1, stride=1, padding=0), nn.ReLU(inplace=True)
         ]
         for _ in range(C.RPIN.N_EXTRA_SELFD_F):
             self_dynamics.append(nn.Conv2d(self.in_feat_dim, self.in_feat_dim,
@@ -20,7 +20,7 @@ class InterNet(nn.Module):
         self.self_dynamics = nn.Sequential(*self_dynamics)
         # relation dynamics, input pairwise object states, output new object state
         rel_dynamics = [
-            nn.Conv2d(self.in_feat_dim * 2, self.in_feat_dim, kernel_size=3, stride=1, padding=1), nn.ReLU(inplace=True)
+            nn.Conv2d(self.in_feat_dim * 2, self.in_feat_dim, kernel_size=1, stride=1, padding=0), nn.ReLU(inplace=True)
         ]
         for _ in range(C.RPIN.N_EXTRA_RELD_F):
             rel_dynamics.append(nn.Conv2d(self.in_feat_dim, self.in_feat_dim,
@@ -29,7 +29,7 @@ class InterNet(nn.Module):
         self.rel_dynamics = nn.Sequential(*rel_dynamics)
         # affector
         affector = [
-            nn.Conv2d(self.in_feat_dim, self.in_feat_dim, kernel_size=3, stride=1, padding=1), nn.ReLU(inplace=True)
+            nn.Conv2d(self.in_feat_dim, self.in_feat_dim, kernel_size=1, stride=1, padding=0), nn.ReLU(inplace=True)
         ]
         for _ in range(C.RPIN.N_EXTRA_AFFECTOR_F):
             affector.append(nn.Conv2d(self.in_feat_dim, self.in_feat_dim,
@@ -38,7 +38,7 @@ class InterNet(nn.Module):
         self.affector = nn.Sequential(*affector)
         # aggregator
         aggregator = [
-            nn.Conv2d(self.in_feat_dim * 2, self.in_feat_dim, kernel_size=3, stride=1, padding=1), nn.ReLU(inplace=True)
+            nn.Conv2d(self.in_feat_dim * 2, self.in_feat_dim, kernel_size=1, stride=1, padding=0), nn.ReLU(inplace=True)
         ]
         for _ in range(C.RPIN.N_EXTRA_AGGREGATOR_F):
             aggregator.append(nn.Conv2d(self.in_feat_dim, self.in_feat_dim,

@@ -22,6 +22,7 @@ def arg_parse():
     parser.add_argument('--init', type=str, help='(optionally) path to pretrained model', default='')
     parser.add_argument('--gpus', type=str, help='specification for GPU, use comma to separate GPUS', default='')
     parser.add_argument('--output', type=str, help='output name')
+    parser.add_argument('--num_workers', type=int, help='set random seed use this command', default=8)
     parser.add_argument('--seed', type=int, help='set random seed use this command', default=0)
     return parser.parse_args()
 
@@ -96,7 +97,7 @@ def main():
     train_set = eval(f'{cfg.DATASET_ABS}')(data_root=cfg.DATA_ROOT, split='train', image_ext=cfg.RPIN.IMAGE_EXT)
     val_set = eval(f'{cfg.DATASET_ABS}')(data_root=cfg.DATA_ROOT, split='test', image_ext=cfg.RPIN.IMAGE_EXT)
     # kwargs = {'pin_memory': True, 'num_workers': 4}
-    kwargs = {'pin_memory': True, 'num_workers': 4}
+    kwargs = {'pin_memory': True, 'num_workers': args.num_workers}
     # print('train_set',train_set)
     train_loader = torch.utils.data.DataLoader(
         train_set, batch_size=cfg.SOLVER.BATCH_SIZE, collate_fn=collect_fn, shuffle=True, **kwargs,
