@@ -150,7 +150,7 @@ class Trainer(object):
                 'valid': to_device(valid) if self.device == torch.device('cuda') else gt_center3d_world,
                 }
 
-                outputs = self.model(features, pointclouds, edges_self, edges_forward, data_pc_oind, data_pc_oind_help, data_pc_find, data_pc_bind, num_rollouts=self.ptrain_size, g_idx=g_idx, phase='test')
+                outputs = self.model(features, pointclouds, edges_self, edges_forward, data_pc_oind, data_pc_oind_help, data_pc_find, data_pc_bind, num_rollouts=self.ptest_size, g_idx=g_idx, phase='test')
                 self.loss(outputs, labels, 'test')
 
         print('\r', end='')
