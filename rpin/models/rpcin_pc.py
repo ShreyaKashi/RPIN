@@ -21,6 +21,7 @@ class Net(nn.Module):
         self.time_step = C.RPIN.INPUT_SIZE
         # self.ve_feat_dim = C.RPIN.VE_FEAT_DIM  # visual encoder feature dimension
         self.in_feat_dim = C.RPIN.IN_FEAT_DIM  # interaction net feature dimension
+        # print('self.in_feat_dim',self.in_feat_dim)
         self.num_objs = C.RPIN.MAX_NUM_OBJS
         self.mask_size = C.RPIN.MASK_SIZE
         self.picked_state_list = [0, 3, 6, 9]
@@ -29,7 +30,8 @@ class Net(nn.Module):
         # self.backbone = build_backbone(C.RPIN.BACKBONE, self.ve_feat_dim, C.INPUT.IMAGE_CHANNEL)
         # build point cloud encoder
         pc_backbon_cfg = edict(yaml.safe_load(open(C.RPIN.PCF_ARGS, 'r')))
-        pc_backbon_cfg = get_default_configs(pc_backbon_cfg)
+        # print(pc_backbon_cfg)
+        pc_backbon_cfg = get_default_configs(pc_backbon_cfg,num_level=pc_backbon_cfg['num_level'])
         # pc_backbon_cfg.pretrain_path = args.pretrain_path
         # pc_backbon_cfg.config = args.config
         # pc_backbon_cfg.split = args.split
@@ -230,7 +232,6 @@ class Net(nn.Module):
                     x_o = x_f[:, data_pc_oind_tensor_one[o]:data_pc_oind_tensor_one[o+1],:]
                     feature_o.append(x_o.mean(1))
                     # print('data_pc_oind_tensor_one',data_pc_oind_tensor_one)
-                    # print('x_o',x_o.shape)
                 if len(feature_o) < self.num_objs:
                     feature_o=feature_o + [feature_o[0] for _ in range(C.RPIN.MAX_NUM_OBJS - num_objs[b])]
                 feature_o=torch.cat(feature_o,0)
