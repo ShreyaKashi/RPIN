@@ -108,5 +108,9 @@ def _get_ss_im(im_name):
     # for shape-stack dataset
     # since no resizing is performed for this dataset
     # low resolution is the same as the high resolution
-    im = cv2.imread(im_name)
+    # im = cv2.imread(im_name)
+    im = cv2.cvtColor(
+                   cv2.imread(im_name),
+                   cv2.COLOR_BGR2RGB,
+               )
     return im

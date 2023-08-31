@@ -125,8 +125,9 @@ class PCF_Backbone(nn.Module):
 
         self.pointconv = nn.ModuleList()
         self.pointconv_res = nn.ModuleList()
-
+        # print('self.total_level',self.total_level)
         for i in range(1, self.total_level):
+            # print('i',i)
             in_ch = cfg.feat_dim[i - 1]
             out_ch = cfg.feat_dim[i]
             weightnet = [weightnet_input_dim, cfg.mid_dim[i]]

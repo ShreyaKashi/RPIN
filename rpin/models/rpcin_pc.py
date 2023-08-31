@@ -125,6 +125,8 @@ class Net(nn.Module):
         for i in range(num_rollouts):
             c = [self.graph[j](state_list[j], g_idx) for j in range(self.time_step)]
             all_c = torch.cat(c, 2)
+            # print('all_c.shape',all_c.shape)
+            # print('all_c.reshape((-1,) + (all_c.shape[-3:])).shape',all_c.reshape((-1,) + (all_c.shape[-3:])).shape)
             s = self.predictor(all_c.reshape((-1,) + (all_c.shape[-3:])))
             s = s.reshape((batch_size, self.num_objs) + s.shape[-3:])
             center3d_world = self.center3d_world(s.reshape(batch_size, self.num_objs, -1))

@@ -73,6 +73,7 @@ class InterNet(nn.Module):
     def forward(self, x, g_idx=None):
         s = x
         # of shape (b, o, dim, 7, 7)
+        # print('x.shape',x.shape)
         batch_size, num_objs, dim, psz, psz = x.shape
         x1 = x.repeat(1, num_objs - 1, 1, 1, 1)
         i1 = g_idx[..., [0], None, None].repeat(1, 1, dim, psz, psz)

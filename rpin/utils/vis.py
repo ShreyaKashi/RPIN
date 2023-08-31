@@ -30,8 +30,8 @@ WAD_COLORS = np.array(
     dtype=np.uint8)
 
 
-def plot_rollouts(im_data, pred_boxes, gt_boxes, pred_masks=None, gt_masks=None, 
-                  pred_center3d_2d=None, pred_center3d_2d_depth=None, gt_center3d_2d_center_depth=None,
+def plot_rollouts(im_data, pred_center3d_world_img, gt_center3d_world_img, 
+                  pred_center3d_world_dep=None, gt_center3d_world_dep=None,
                   output_dir='', output_name='', bg_image=None):
     # plot rollouts for different dataset
     # 1. plot images
@@ -52,12 +52,12 @@ def plot_rollouts(im_data, pred_boxes, gt_boxes, pred_masks=None, gt_masks=None,
     # 2. side-by-side gt and predictions
     plt.subplot(1, 2, 1)
     plt.axis('off')
-    plt.imshow(im_data[..., ::-1])
-    _plot_bbox_traj(pred_boxes, size=160, alpha=1.0)
+    plt.imshow(im_data[0])
+    _plot_bbox_traj(pred_center3d_world_img, size=160, alpha=1.0)
     plt.subplot(1, 2, 2)
     plt.axis('off')
-    plt.imshow(im_data[..., ::-1])
-    _plot_bbox_traj(gt_boxes, size=160, alpha=1.0)
+    plt.imshow(im_data[0])
+    _plot_bbox_traj(gt_center3d_world_img, size=160, alpha=1.0)
     plt.savefig(f'{bbox_dir}/sbs_{output_name}.{im_ext}', **kwargs)
     plt.close()
     # # 3. separate print two images
@@ -77,24 +77,24 @@ def plot_rollouts(im_data, pred_boxes, gt_boxes, pred_masks=None, gt_masks=None,
     # video_dir = os.path.join(output_dir, 'video')
     # os.makedirs(video_dir, exist_ok=True)
     # kwargs['format'] = 'png'
-    # for i in range(gt_boxes.shape[0]):
+    # for i in range(gt_center3d_world_img.shape[0]):
     #     plt.axis('off')
     #     plt.imshow(im_data[..., ::-1])
-    #     _plot_bbox_traj(gt_boxes[:i+1], size=320, alpha=1.0)
+    #     _plot_bbox_traj(gt_center3d_world_img[:i+1], size=320, alpha=1.0)
     #     plt.savefig(f'{video_dir}/gt_{output_name}_{i}.png', **kwargs)
     #     plt.close()
-    # for i in range(pred_boxes.shape[0]):
+    # for i in range(pred_center3d_world_img.shape[0]):
     #     plt.axis('off')
     #     plt.imshow(im_data[..., ::-1])
-    #     _plot_bbox_traj(pred_boxes[:i+1], size=320, alpha=1.0)
+    #     _plot_bbox_traj(pred_center3d_world_img[:i+1], size=320, alpha=1.0)
     #     plt.savefig(f'{video_dir}/pred_{output_name}_{i}.png', **kwargs)
     #     plt.close()
 
-    if pred_masks is None:
-        return
+    # if pred_masks is None:
+    #     return
 
-    mask_dir = os.path.join(output_dir, 'mask')
-    os.makedirs(mask_dir, exist_ok=True)
+    # mask_dir = os.path.join(output_dir, 'mask')
+    # os.makedirs(mask_dir, exist_ok=True)
     # currently the following are only for the [shape-stack] dataset
     # the radius is assumed to be 35 (as in original CVP paper)
     mask_colors = [
@@ -142,50 +142,50 @@ def plot_rollouts(im_data, pred_boxes, gt_boxes, pred_masks=None, gt_masks=None,
     # plt.savefig(f'{bbox_dir}/gt_{output_name}_0.{im_ext}', **kwargs)
     # plt.close()
 
-    time_step, num_objs = pred_boxes.shape[:2]
-    for t_id in range(time_step):
-        # gt_mask_im = bg_image.copy() * 255
-        # pred_mask_im = bg_image.copy() * 255
-        gt_mask_im = im_data.copy()
-        pred_mask_im = im_data.copy()
-        for o_id in range(num_objs):
-            gt_bbox_t_o = np.maximum(np.minimum(np.round(gt_boxes[t_id, o_id]).astype(int), C.RPIN.INPUT_WIDTH - 1), 0)
-            gt_mask_t_o = cv2.resize(gt_masks[t_id, o_id], (gt_bbox_t_o[2] - gt_bbox_t_o[0] + 1,
-                                                            gt_bbox_t_o[3] - gt_bbox_t_o[1] + 1))
-            gt_mask_t_o = (gt_mask_t_o >= 0.5)
-            for c_id in range(3):
-                gt_mask_im[gt_bbox_t_o[1]:gt_bbox_t_o[3] + 1,
-                           gt_bbox_t_o[0]:gt_bbox_t_o[2] + 1, c_id][gt_mask_t_o] = mask_colors[o_id][c_id]
+    # time_step, num_objs = pred_center3d_world_img.shape[:2]
+    # for t_id in range(time_step):
+    #     # gt_mask_im = bg_image.copy() * 255
+    #     # pred_mask_im = bg_image.copy() * 255
+    #     gt_mask_im = im_data.copy()
+    #     pred_mask_im = im_data.copy()
+    #     for o_id in range(num_objs):
+    #         gt_bbox_t_o = np.maximum(np.minimum(np.round(gt_center3d_world_img[t_id, o_id]).astype(int), C.RPIN.INPUT_WIDTH - 1), 0)
+    #         gt_mask_t_o = cv2.resize(gt_masks[t_id, o_id], (gt_bbox_t_o[2] - gt_bbox_t_o[0] + 1,
+    #                                                         gt_bbox_t_o[3] - gt_bbox_t_o[1] + 1))
+    #         gt_mask_t_o = (gt_mask_t_o >= 0.5)
+    #         for c_id in range(3):
+    #             gt_mask_im[gt_bbox_t_o[1]:gt_bbox_t_o[3] + 1,
+    #                        gt_bbox_t_o[0]:gt_bbox_t_o[2] + 1, c_id][gt_mask_t_o] = mask_colors[o_id][c_id]
 
-            pred_bbox_t_o = np.maximum(np.minimum(np.round(pred_boxes[t_id, o_id]).astype(int), C.RPIN.INPUT_WIDTH - 1), 0)
-            pred_mask_t_o = cv2.resize(pred_masks[t_id, o_id], (pred_bbox_t_o[2] - pred_bbox_t_o[0] + 1,
-                                                                pred_bbox_t_o[3] - pred_bbox_t_o[1] + 1))
-            pred_mask_t_o = (pred_mask_t_o >= 0.5)
-            for c_id in range(3):
-                pred_mask_im[pred_bbox_t_o[1]:pred_bbox_t_o[3] + 1,
-                             pred_bbox_t_o[0]:pred_bbox_t_o[2] + 1, c_id][pred_mask_t_o] = mask_colors[o_id][c_id]
+    #         pred_bbox_t_o = np.maximum(np.minimum(np.round(pred_center3d_world_img[t_id, o_id]).astype(int), C.RPIN.INPUT_WIDTH - 1), 0)
+    #         pred_mask_t_o = cv2.resize(pred_masks[t_id, o_id], (pred_bbox_t_o[2] - pred_bbox_t_o[0] + 1,
+    #                                                             pred_bbox_t_o[3] - pred_bbox_t_o[1] + 1))
+    #         pred_mask_t_o = (pred_mask_t_o >= 0.5)
+    #         for c_id in range(3):
+    #             pred_mask_im[pred_bbox_t_o[1]:pred_bbox_t_o[3] + 1,
+    #                          pred_bbox_t_o[0]:pred_bbox_t_o[2] + 1, c_id][pred_mask_t_o] = mask_colors[o_id][c_id]
 
-        plt.figure(figsize=(12, 12))
-        plt.subplot(1, 2, 1)
-        pred_mask_im = np.minimum(np.maximum(pred_mask_im, 0.0), 255.0)
-        plt.imshow(pred_mask_im.astype(np.uint8))
-        plt.subplot(1, 2, 2)
-        gt_mask_im = np.minimum(np.maximum(gt_mask_im, 0.0), 255.0)
-        plt.imshow(gt_mask_im.astype(np.uint8))
-        plt.savefig(f'{mask_dir}/{output_name}_{t_id + 1}.{im_ext}', **kwargs)
-        plt.close()
-        # plt.figure(figsize=(12, 12))
-        # plt.axis('off')
-        # pred_mask_im = np.minimum(np.maximum(pred_mask_im, 0.0), 255.0)
-        # plt.imshow(pred_mask_im.astype(np.uint8))
-        # plt.savefig(f'{mask_dir}/pred_{output_name}_{t_id + 1}.{im_ext}', **kwargs)
-        # plt.close()
-        # plt.figure(figsize=(12, 12))
-        # plt.axis('off')
-        # gt_mask_im = np.minimum(np.maximum(gt_mask_im, 0.0), 255.0)
-        # plt.imshow(gt_mask_im.astype(np.uint8))
-        # plt.savefig(f'{mask_dir}/gt_{output_name}_{t_id + 1}.{im_ext}', **kwargs)
-        # plt.close()
+    #     plt.figure(figsize=(12, 12))
+    #     plt.subplot(1, 2, 1)
+    #     pred_mask_im = np.minimum(np.maximum(pred_mask_im, 0.0), 255.0)
+    #     plt.imshow(pred_mask_im.astype(np.uint8))
+    #     plt.subplot(1, 2, 2)
+    #     gt_mask_im = np.minimum(np.maximum(gt_mask_im, 0.0), 255.0)
+    #     plt.imshow(gt_mask_im.astype(np.uint8))
+    #     plt.savefig(f'{mask_dir}/{output_name}_{t_id + 1}.{im_ext}', **kwargs)
+    #     plt.close()
+    #     # plt.figure(figsize=(12, 12))
+    #     # plt.axis('off')
+    #     # pred_mask_im = np.minimum(np.maximum(pred_mask_im, 0.0), 255.0)
+    #     # plt.imshow(pred_mask_im.astype(np.uint8))
+    #     # plt.savefig(f'{mask_dir}/pred_{output_name}_{t_id + 1}.{im_ext}', **kwargs)
+    #     # plt.close()
+    #     # plt.figure(figsize=(12, 12))
+    #     # plt.axis('off')
+    #     # gt_mask_im = np.minimum(np.maximum(gt_mask_im, 0.0), 255.0)
+    #     # plt.imshow(gt_mask_im.astype(np.uint8))
+    #     # plt.savefig(f'{mask_dir}/gt_{output_name}_{t_id + 1}.{im_ext}', **kwargs)
+    #     # plt.close()
     color_progress = 1
     color_cyan = (0, 1 - 0.4 * color_progress, 1 - 0.4 * color_progress)
     color_brown = (0.4 + 0.4 * color_progress, 0.2 + 0.2 * color_progress, 0.0)
@@ -194,71 +194,78 @@ def plot_rollouts(im_data, pred_boxes, gt_boxes, pred_masks=None, gt_masks=None,
     color_orange = (1.0, 0.5 + 0.3 * color_progress, 0.4 * color_progress)
     color = [color_red, color_purple, color_orange, color_cyan, color_cyan, color_brown]
 
-    depth_all= 40
-    center_3d_dir = os.path.join(output_dir, 'center_3d')
+    depth_all= 25
+    center_3d_dir = os.path.join(output_dir, 'center_3d_2d')
     os.makedirs(center_3d_dir, exist_ok=True)
-    time_step, num_objs = pred_boxes.shape[:2]
+    time_step, num_objs = pred_center3d_world_img.shape[:2]
     size_center_3d_2d = 40
     for t_id in range(time_step):
         # gt_mask_im = bg_image.copy() * 255
         # pred_mask_im = bg_image.copy() * 255
-        gt_mask_im = im_data.copy()
-        pred_mask_im = im_data.copy()
+        # gt_mask_im = im_data.copy()
+        # pred_mask_im = im_data.copy()
 
-        gt_center_3d_2d_cam_im = np.zeros(im_data.shape,np.uint8)
-        gt_center_3d_2d_cam_im[:,:,:]=255
-        pred_center_3d_2d_cam_im = np.zeros(im_data.shape,np.uint8)
-        pred_center_3d_2d_cam_im[:,:,:]=255
+        gt_center_3d_2d_cam_im = im_data[t_id].copy()
+        pred_center_3d_2d_cam_im = im_data[0].copy()
 
-        gt_center_3d_2d_bev_im = np.zeros((depth_all, im_data.shape[1], im_data.shape[2]),np.uint8)
+        # gt_center_3d_2d_cam_im = np.zeros(im_data.shape,np.uint8)
+        # gt_center_3d_2d_cam_im[:,:,:]=255
+        # pred_center_3d_2d_cam_im = np.zeros(im_data.shape,np.uint8)
+        # pred_center_3d_2d_cam_im[:,:,:]=255
+
+        gt_center_3d_2d_bev_im = np.zeros((depth_all, im_data[0].shape[1], im_data[0].shape[2]),np.uint8)
         gt_center_3d_2d_bev_im[:,:,:]=255
-        pred_center_3d_2d_bev_im = np.zeros((depth_all, im_data.shape[1], im_data.shape[2]),np.uint8)
+        pred_center_3d_2d_bev_im = np.zeros((depth_all, im_data[0].shape[1], im_data[0].shape[2]),np.uint8)
         pred_center_3d_2d_bev_im[:,:,:]=255
 
         fig= plt.figure(figsize=(10, 12))
-        ax=fig.subplots(3,2)
+        ax=fig.subplots(2,2)
+        fig.subplots_adjust(hspace=0.01)
+        # plt.subplots_adjust(hspace=0.01)
+        # ax.subplots_adjust(hspace=0.1)
 
         ax[0,0].imshow(pred_center_3d_2d_bev_im.astype(np.uint8))
         ax[0,1].imshow(gt_center_3d_2d_bev_im.astype(np.uint8))
 
-        ax[1,0].imshow(pred_center_3d_2d_cam_im.astype(np.uint8))
-        ax[1,1].imshow(gt_center_3d_2d_cam_im.astype(np.uint8))
+        ax[1,0].imshow(pred_center_3d_2d_cam_im)
+        ax[1,1].imshow(gt_center_3d_2d_cam_im)
 
         for o_id in range(num_objs):
-            gt_bbox_t_o = np.maximum(np.minimum(np.round(gt_boxes[t_id, o_id]).astype(int), C.RPIN.INPUT_WIDTH - 1), 0)
-            gt_mask_t_o = cv2.resize(gt_masks[t_id, o_id], (gt_bbox_t_o[2] - gt_bbox_t_o[0] + 1,
-                                                            gt_bbox_t_o[3] - gt_bbox_t_o[1] + 1))
-            gt_mask_t_o = (gt_mask_t_o >= 0.5)
-            for c_id in range(3):
-                gt_mask_im[gt_bbox_t_o[1]:gt_bbox_t_o[3] + 1,
-                           gt_bbox_t_o[0]:gt_bbox_t_o[2] + 1, c_id][gt_mask_t_o] = mask_colors[o_id][c_id]
+            # gt_bbox_t_o = np.maximum(np.minimum(np.round(gt_center3d_world_img[t_id, o_id]).astype(int), C.RPIN.INPUT_WIDTH - 1), 0)
+            # gt_mask_t_o = cv2.resize(gt_masks[t_id, o_id], (gt_bbox_t_o[2] - gt_bbox_t_o[0] + 1,
+            #                                                 gt_bbox_t_o[3] - gt_bbox_t_o[1] + 1))
+            # gt_mask_t_o = (gt_mask_t_o >= 0.5)
+            # for c_id in range(3):
+            #     gt_mask_im[gt_bbox_t_o[1]:gt_bbox_t_o[3] + 1,
+            #                gt_bbox_t_o[0]:gt_bbox_t_o[2] + 1, c_id][gt_mask_t_o] = mask_colors[o_id][c_id]
 
-            pred_bbox_t_o = np.maximum(np.minimum(np.round(pred_boxes[t_id, o_id]).astype(int), C.RPIN.INPUT_WIDTH - 1), 0)
-            pred_mask_t_o = cv2.resize(pred_masks[t_id, o_id], (pred_bbox_t_o[2] - pred_bbox_t_o[0] + 1,
-                                                                pred_bbox_t_o[3] - pred_bbox_t_o[1] + 1))
-            pred_mask_t_o = (pred_mask_t_o >= 0.5)
-            for c_id in range(3):
-                pred_mask_im[pred_bbox_t_o[1]:pred_bbox_t_o[3] + 1,
-                             pred_bbox_t_o[0]:pred_bbox_t_o[2] + 1, c_id][pred_mask_t_o] = mask_colors[o_id][c_id]
+            # pred_bbox_t_o = np.maximum(np.minimum(np.round(pred_center3d_world_img[t_id, o_id]).astype(int), C.RPIN.INPUT_WIDTH - 1), 0)
+            # pred_mask_t_o = cv2.resize(pred_masks[t_id, o_id], (pred_bbox_t_o[2] - pred_bbox_t_o[0] + 1,
+            #                                                     pred_bbox_t_o[3] - pred_bbox_t_o[1] + 1))
+            # pred_mask_t_o = (pred_mask_t_o >= 0.5)
+            # for c_id in range(3):
+            #     pred_mask_im[pred_bbox_t_o[1]:pred_bbox_t_o[3] + 1,
+            #                  pred_bbox_t_o[0]:pred_bbox_t_o[2] + 1, c_id][pred_mask_t_o] = mask_colors[o_id][c_id]
                 
             # color_center_3d_2d = mask_colors[o_id][c_id]
         
-            ax[0,0].scatter(pred_center3d_2d[t_id, o_id][0], pred_center3d_2d_depth[t_id, o_id][0], size_center_3d_2d,color=color[o_id])
+            ax[0,0].scatter(pred_center3d_world_img[t_id, o_id][0], pred_center3d_world_dep[t_id, o_id][0], size_center_3d_2d,color=color[o_id])
             # ax[0,0].invert_yaxis()
-            ax[0,1].scatter(gt_center3d_2d_center_depth[t_id, o_id][0], gt_center3d_2d_center_depth[t_id, o_id][2], size_center_3d_2d,color=color[o_id])
+            ax[0,1].scatter(gt_center3d_world_img[t_id, o_id][0], gt_center3d_world_dep[t_id, o_id][0], size_center_3d_2d,color=color[o_id])
             # ax[0,1].invert_yaxis()
 
-            ax[1,0].scatter(pred_center3d_2d[t_id, o_id][0], pred_center3d_2d[t_id, o_id][1], size_center_3d_2d,color=color[o_id])
-            ax[1,0].text(pred_center3d_2d[t_id, o_id][0], pred_center3d_2d[t_id, o_id][1], pred_center3d_2d_depth[t_id, o_id][0], rotation=30)
-            ax[1,1].scatter(gt_center3d_2d_center_depth[t_id, o_id][0], gt_center3d_2d_center_depth[t_id, o_id][1], size_center_3d_2d,color=color[o_id])
-            ax[1,1].text(gt_center3d_2d_center_depth[t_id, o_id][0], gt_center3d_2d_center_depth[t_id, o_id][1], gt_center3d_2d_center_depth[t_id, o_id][2], rotation=30)
+            ax[1,0].scatter(pred_center3d_world_img[t_id, o_id][0], pred_center3d_world_img[t_id, o_id][1], size_center_3d_2d,color=color[o_id])
+            ax[1,0].text(pred_center3d_world_img[t_id, o_id][0], pred_center3d_world_img[t_id, o_id][1], pred_center3d_world_dep[t_id, o_id][0], rotation=30)
+            ax[1,1].scatter(gt_center3d_world_img[t_id, o_id][0], gt_center3d_world_img[t_id, o_id][1], size_center_3d_2d,color=color[o_id])
+            ax[1,1].text(gt_center3d_world_img[t_id, o_id][0], gt_center3d_world_img[t_id, o_id][1], gt_center3d_world_dep[t_id, o_id][0], rotation=30)
         ax[0,0].invert_yaxis()
         ax[0,1].invert_yaxis()
-        pred_mask_im = np.minimum(np.maximum(pred_mask_im, 0.0), 255.0)
-        ax[2,0].imshow(pred_mask_im.astype(np.uint8))
+        # pred_mask_im = np.minimum(np.maximum(pred_mask_im, 0.0), 255.0)
+        # ax[2,0].imshow(pred_mask_im.astype(np.uint8))
 
-        gt_mask_im = np.minimum(np.maximum(gt_mask_im, 0.0), 255.0)
-        ax[2,1].imshow(gt_mask_im.astype(np.uint8))
+        # gt_mask_im = np.minimum(np.maximum(gt_mask_im, 0.0), 255.0)
+        # ax[2,1].imshow(gt_mask_im.astype(np.uint8))
+        # plt.subplots_adjust(hspace=0.1)
         plt.savefig(f'{center_3d_dir}/{output_name}_{t_id + 1}.{im_ext}', **kwargs)
         plt.close()
     # r = 35
@@ -334,3 +341,26 @@ def plot_data(data):
             data_b_t = data_b_t.transpose((1, 2, 0))
             plt.imshow(data_b_t)
             plt.show()
+
+
+def WorldToImg_coord(world_coords, cam_extrinsic_mat, cam_intrinsic_mat):
+
+    zero_help=np.ones((world_coords.shape[0],world_coords.shape[1],1))
+    world_coords_new = np.concatenate([world_coords,zero_help], -1)
+    img_coords_v=[]
+    for i in range(world_coords.shape[0]):
+        img_coords_f=[]
+        for j in range(world_coords.shape[1]):
+            world_coords_new = [world_coords[i][j][0],world_coords[i][j][1],world_coords[i][j][2],1]
+            cam_coords = np.dot(cam_extrinsic_mat, world_coords_new)
+            img_coords = np.dot(cam_intrinsic_mat, np.dot(cam_extrinsic_mat, world_coords_new))
+            x = int(img_coords[0] / img_coords[2])
+            y = int(img_coords[1] / img_coords[2])
+            img_coords_o=[x,y,np.around(cam_coords[2],decimals=3)]
+            # print('img_coords_o',img_coords_o)
+            img_coords_f.append(img_coords_o)
+        img_coords_v.append(img_coords_f)
+    img_coords_v = np.array(img_coords_v)
+    # print('img_coords_v.shape',img_coords_v.shape)
+    # assert 1==2
+    return img_coords_v[...,:2], img_coords_v[...,2:3]

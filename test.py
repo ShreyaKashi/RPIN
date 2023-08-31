@@ -12,6 +12,7 @@ from rpin.datasets import *
 from rpin.utils.config import _C as C
 from rpin.evaluator_plan import PlannerPHYRE
 from rpin.evaluator_pred import PredEvaluator
+from rpin.datasets.pc_common import collect_fn
 
 class DObj(object):
     pass
@@ -84,9 +85,10 @@ def main():
     # --- setup data loader
     print('initialize dataset')
     split_name = 'test'
+    # split_name = 'train'
     val_set = eval(f'{C.DATASET_ABS}')(data_root=C.DATA_ROOT, split=split_name, image_ext=C.RPIN.IMAGE_EXT)
     batch_size = 1 if C.RPIN.VAE else C.SOLVER.BATCH_SIZE * num_gpus
-    val_loader = DataLoader(val_set, batch_size=batch_size, num_workers=1)
+    val_loader = DataLoader(val_set, batch_size=batch_size, collate_fn=collect_fn, num_workers=1)
 
     model = eval(args.predictor_arch + '.Net')()
     model.to(torch.device('cuda'))

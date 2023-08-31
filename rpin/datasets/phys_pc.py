@@ -23,6 +23,7 @@ class Phys_pc(Dataset):
         # 1. define property of input and rollout parameters
         self.input_size = C.RPIN.INPUT_SIZE  # number of input images
         self.pred_size = eval(f'C.RPIN.PRED_SIZE_{"TRAIN" if split == "train" else "TEST"}')
+        # self.pred_size = eval(f'C.RPIN.PRED_SIZE_TEST')
         self.seq_size = self.input_size + self.pred_size
         # 2. define model configs
         self.input_height, self.input_width = C.RPIN.INPUT_HEIGHT, C.RPIN.INPUT_WIDTH
